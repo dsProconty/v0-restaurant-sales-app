@@ -7,25 +7,20 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Package, Save } from "lucide-react"
+import { CalendarIcon, Package, Save, Minus, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface Product {
   id: string
   name: string
   price: number
   category: string | null
-}
-
-interface SalesEntry {
-  productId: string
-  quantity: number
 }
 
 export function SalesEntryForm({ products }: { products: Product[] }) {
@@ -59,82 +54,94 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
     return Object.values(entries).reduce((sum, qty) => sum + qty, 0)
   }, [entries])
 
-  function handleQuantityChange(productId: string, value: string) {
-    const quantity = parseInt(value) || 0
+  function handleIncrement(productId: string) {
     setEntries((prev) => ({
       ...prev,
-      [productId]: quantity,
+      [productId]: (prev[productId] || 0) + 1,
     }))
+  }
+
+  function handleDecrement(productId: string) {
+    setEntries((prev) => {
+      const current = prev[productId] || 0
+      if (current <= 0) return prev
+      return { ...prev, [productId]: current - 1 }
+    })
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (totalAmount === 0) return
+    if (totalAmount === 0 && notes.trim() === "") {
+      toast.error("Ingresa al menos un producto o una nota antes de guardar.")
+      return
+    }
 
     setIsSubmitting(true)
 
-    const saleDate = format(date, "yyyy-MM-dd")
+    try {
+      const saleDate = format(date, "yyyy-MM-dd")
 
-    // FIX #1: usar maybeSingle() en lugar de single()
-    // single() lanza error 406 cuando no encuentra resultados
-    // maybeSingle() devuelve null sin error
-    const { data: existingSale } = await supabase
-      .from("daily_sales")
-      .select("id")
-      .eq("sale_date", saleDate)
-      .maybeSingle()
-
-    let saleId: string
-
-    if (existingSale) {
-      // Update existing sale
-      // FIX #2: columna correcta es "total_revenue", no "total_amount"
-      await supabase
+      const { data: existingSale } = await supabase
         .from("daily_sales")
-        .update({
-          total_revenue: totalAmount,
-        })
-        .eq("id", existingSale.id)
-
-      // Delete existing items
-      await supabase.from("sales_items").delete().eq("daily_sale_id", existingSale.id)
-
-      saleId = existingSale.id
-    } else {
-      // Create new sale
-      // FIX #2: columna correcta es "total_revenue", no "total_amount"
-      const { data: newSale } = await supabase
-        .from("daily_sales")
-        .insert({
-          sale_date: saleDate,
-          total_revenue: totalAmount,
-        })
         .select("id")
+        .eq("sale_date", saleDate)
         .maybeSingle()
 
-      saleId = newSale!.id
+      let saleId: string
+
+      if (existingSale) {
+        const { error } = await supabase
+          .from("daily_sales")
+          .update({
+            total_revenue: totalAmount,
+            notes: notes.trim() || null,
+          })
+          .eq("id", existingSale.id)
+
+        if (error) throw error
+
+        await supabase.from("sales_items").delete().eq("daily_sale_id", existingSale.id)
+        saleId = existingSale.id
+      } else {
+        const { data: newSale, error } = await supabase
+          .from("daily_sales")
+          .insert({
+            sale_date: saleDate,
+            total_revenue: totalAmount,
+            notes: notes.trim() || null,
+          })
+          .select("id")
+          .maybeSingle()
+
+        if (error) throw error
+        saleId = newSale!.id
+      }
+
+      const items = Object.entries(entries)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([productId, quantity]) => {
+          const product = products.find((p) => p.id === productId)!
+          return {
+            daily_sale_id: saleId,
+            product_id: productId,
+            quantity,
+            unit_price: product.price,
+            subtotal: product.price * quantity,
+          }
+        })
+
+      if (items.length > 0) {
+        const { error } = await supabase.from("sales_items").insert(items)
+        if (error) throw error
+      }
+
+      toast.success("¡Ventas guardadas correctamente!")
+      router.push(`/sales/${saleId}`)
+    } catch (error) {
+      console.error("Error guardando ventas:", error)
+      toast.error("Error al guardar las ventas. Intenta de nuevo.")
+      setIsSubmitting(false)
     }
-
-    // Insert sale items
-    const items = Object.entries(entries)
-      .filter(([, quantity]) => quantity > 0)
-      .map(([productId, quantity]) => {
-        const product = products.find((p) => p.id === productId)!
-        return {
-          daily_sale_id: saleId,
-          product_id: productId,
-          quantity,
-          unit_price: product.price,
-          subtotal: product.price * quantity,
-        }
-      })
-
-    if (items.length > 0) {
-      await supabase.from("sales_items").insert(items)
-    }
-
-    setIsSubmitting(false)
-    router.push(`/sales/${saleId}`)
   }
 
   if (products.length === 0) {
@@ -199,34 +206,53 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {categoryProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center justify-between rounded-lg border border-border p-4"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          ${product.price.toFixed(2)} c/u
-                        </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {categoryProducts.map((product) => {
+                    const qty = entries[product.id] || 0
+                    return (
+                      <div
+                        key={product.id}
+                        className={cn(
+                          "flex items-center justify-between rounded-lg border p-4 transition-colors",
+                          qty > 0 ? "border-primary bg-primary/5" : "border-border"
+                        )}
+                      >
+                        <div className="flex-1 min-w-0 mr-3">
+                          <p className="font-medium text-foreground truncate">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            ${product.price.toFixed(2)} c/u
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => handleDecrement(product.id)}
+                            disabled={qty === 0}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className={cn(
+                            "w-8 text-center font-semibold text-sm tabular-nums",
+                            qty > 0 ? "text-primary" : "text-muted-foreground"
+                          )}>
+                            {qty}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => handleIncrement(product.id)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor={`qty-${product.id}`} className="sr-only">
-                          Cantidad
-                        </Label>
-                        <Input
-                          id={`qty-${product.id}`}
-                          type="number"
-                          min="0"
-                          value={entries[product.id] || ""}
-                          onChange={(e) => handleQuantityChange(product.id, e.target.value)}
-                          className="w-20 text-center"
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -286,7 +312,7 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
               )}
               {itemCount === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Ingresa cantidades para ver el resumen
+                  Usa los botones + para agregar productos
                 </p>
               )}
             </CardContent>
@@ -294,7 +320,7 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isSubmitting || totalAmount === 0}
+                disabled={isSubmitting || (totalAmount === 0 && notes.trim() === "")}
               >
                 <Save className="mr-2 h-4 w-4" />
                 {isSubmitting ? "Guardando..." : "Guardar Ventas"}

@@ -2,8 +2,9 @@ import { createClient } from "@/lib/supabase/server"
 import { Navigation } from "@/components/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { PlusCircle, TrendingUp, Package, Calendar } from "lucide-react"
+import { PlusCircle, TrendingUp, Package, Calendar, CheckCircle2 } from "lucide-react"
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -16,7 +17,7 @@ async function getDashboardData() {
   // Get today's sales
   const { data: todaySales } = await supabase
     .from("daily_sales")
-    .select("total_revenue")
+    .select("id, total_revenue")
     .eq("sale_date", format(today, "yyyy-MM-dd"))
     .maybeSingle()
 
@@ -54,6 +55,8 @@ async function getDashboardData() {
 
   return {
     todayTotal: todaySales?.total_revenue || 0,
+    todayRegistered: !!todaySales,
+    todaySaleId: todaySales?.id || null,
     monthTotal,
     avgDaily,
     productCount: productCount || 0,
@@ -78,12 +81,24 @@ export default async function DashboardPage() {
                 Resumen de las ventas de tu restaurante
               </p>
             </div>
-            <Button asChild>
-              <Link href="/sales/new" className="flex items-center gap-2">
-                <PlusCircle className="h-4 w-4" />
-                Registrar Ventas de Hoy
-              </Link>
-            </Button>
+            <div className="flex items-center gap-3">
+              {data.todayRegistered ? (
+                <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Ventas de hoy registradas</span>
+                  <Link href={`/sales/${data.todaySaleId}`} className="underline font-medium">
+                    Ver
+                  </Link>
+                </div>
+              ) : (
+                <Button asChild>
+                  <Link href="/sales/new" className="flex items-center gap-2">
+                    <PlusCircle className="h-4 w-4" />
+                    Registrar Ventas de Hoy
+                  </Link>
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -96,7 +111,12 @@ export default async function DashboardPage() {
                 <div className="text-2xl font-bold text-foreground">
                   ${data.todayTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                 </div>
-                <p className="text-xs text-muted-foreground">{format(new Date(), "EEEE, d 'de' MMMM", { locale: es })}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-xs text-muted-foreground">{format(new Date(), "EEEE, d 'de' MMMM", { locale: es })}</p>
+                  {data.todayRegistered && (
+                    <Badge variant="secondary" className="text-xs py-0 bg-green-100 text-green-700">✓ Registrado</Badge>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -153,15 +173,17 @@ export default async function DashboardPage() {
                     const amount = sale?.total_revenue || 0
                     const maxAmount = Math.max(...data.weekSales.map((s) => s.total_revenue || 0), 1)
                     const percentage = (amount / maxAmount) * 100
+                    const isToday = date === format(new Date(), "yyyy-MM-dd")
                     return (
                       <div key={date} className="flex items-center gap-3">
-                        <div className="w-16 text-sm text-muted-foreground">
+                        <div className={`w-16 text-sm ${isToday ? "font-semibold text-primary" : "text-muted-foreground"}`}>
                           {format(new Date(date + "T12:00:00"), "EEE", { locale: es })}
+                          {isToday && " •"}
                         </div>
                         <div className="flex-1">
                           <div className="h-6 rounded-md bg-muted overflow-hidden">
                             <div
-                              className="h-full bg-primary transition-all"
+                              className={`h-full transition-all ${isToday ? "bg-primary" : "bg-primary/60"}`}
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
