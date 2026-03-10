@@ -75,22 +75,24 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
 
     const saleDate = format(date, "yyyy-MM-dd")
 
-    // Check if a sale already exists for this date
+    // FIX #1: usar maybeSingle() en lugar de single()
+    // single() lanza error 406 cuando no encuentra resultados
+    // maybeSingle() devuelve null sin error
     const { data: existingSale } = await supabase
       .from("daily_sales")
       .select("id")
       .eq("sale_date", saleDate)
-      .single()
+      .maybeSingle()
 
     let saleId: string
 
     if (existingSale) {
       // Update existing sale
+      // FIX #2: columna correcta es "total_revenue", no "total_amount"
       await supabase
         .from("daily_sales")
         .update({
-          total_amount: totalAmount,
-          notes: notes || null,
+          total_revenue: totalAmount,
         })
         .eq("id", existingSale.id)
 
@@ -100,15 +102,15 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
       saleId = existingSale.id
     } else {
       // Create new sale
+      // FIX #2: columna correcta es "total_revenue", no "total_amount"
       const { data: newSale } = await supabase
         .from("daily_sales")
         .insert({
           sale_date: saleDate,
-          total_amount: totalAmount,
-          notes: notes || null,
+          total_revenue: totalAmount,
         })
         .select("id")
-        .single()
+        .maybeSingle()
 
       saleId = newSale!.id
     }
