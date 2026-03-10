@@ -20,12 +20,13 @@ import { DeleteSaleButton } from "@/components/sales/delete-sale-button"
 async function getSaleDetails(id: string) {
   const supabase = await createClient()
   
+  // FIX #1: usar maybeSingle() en lugar de single()
   const { data: sale } = await supabase
     .from("daily_sales")
     .select(`
       id,
       sale_date,
-      total_amount,
+      total_revenue,
       notes,
       created_at,
       sales_items (
@@ -41,7 +42,7 @@ async function getSaleDetails(id: string) {
       )
     `)
     .eq("id", id)
-    .single()
+    .maybeSingle()
 
   return sale
 }
@@ -142,7 +143,8 @@ export default async function SaleDetailsPage({ params }: { params: Promise<{ id
                   <div className="border-t border-border mt-4 pt-4">
                     <div className="flex justify-between text-lg font-bold text-foreground">
                       <span>Total</span>
-                      <span>${sale.total_amount.toFixed(2)}</span>
+                      {/* FIX #2: columna correcta es total_revenue */}
+                      <span>${sale.total_revenue.toFixed(2)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -175,8 +177,9 @@ export default async function SaleDetailsPage({ params }: { params: Promise<{ id
                   <div className="border-t border-border pt-4">
                     <div className="flex justify-between text-lg">
                       <span className="font-medium text-foreground">Ingreso Total</span>
+                      {/* FIX #2: columna correcta es total_revenue */}
                       <span className="font-bold text-primary">
-                        ${sale.total_amount.toFixed(2)}
+                        ${sale.total_revenue.toFixed(2)}
                       </span>
                     </div>
                   </div>
