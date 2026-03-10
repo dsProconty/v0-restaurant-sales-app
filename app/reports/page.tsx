@@ -24,21 +24,21 @@ async function getReportData() {
   // Get current month sales
   const { data: currentMonthSales } = await supabase
     .from("daily_sales")
-    .select("total_amount, sale_date")
+    .select("total_revenue, sale_date")
     .gte("sale_date", format(currentMonthStart, "yyyy-MM-dd"))
     .lte("sale_date", format(currentMonthEnd, "yyyy-MM-dd"))
   
   // Get previous month sales
   const { data: prevMonthSales } = await supabase
     .from("daily_sales")
-    .select("total_amount")
+    .select("total_revenue")
     .gte("sale_date", format(prevMonthStart, "yyyy-MM-dd"))
     .lte("sale_date", format(prevMonthEnd, "yyyy-MM-dd"))
   
   // Get current week sales
   const { data: currentWeekSales } = await supabase
     .from("daily_sales")
-    .select("total_amount")
+    .select("total_revenue")
     .gte("sale_date", format(currentWeekStart, "yyyy-MM-dd"))
     .lte("sale_date", format(currentWeekEnd, "yyyy-MM-dd"))
   
@@ -80,9 +80,9 @@ async function getReportData() {
     .slice(0, 10)
   
   // Calculate totals
-  const currentMonthTotal = currentMonthSales?.reduce((sum, s) => sum + s.total_amount, 0) || 0
-  const prevMonthTotal = prevMonthSales?.reduce((sum, s) => sum + s.total_amount, 0) || 0
-  const currentWeekTotal = currentWeekSales?.reduce((sum, s) => sum + s.total_amount, 0) || 0
+  const currentMonthTotal = currentMonthSales?.reduce((sum, s) => sum + s.total_revenue, 0) || 0
+  const prevMonthTotal = prevMonthSales?.reduce((sum, s) => sum + s.total_revenue, 0) || 0
+  const currentWeekTotal = currentWeekSales?.reduce((sum, s) => sum + s.total_revenue, 0) || 0
   
   const monthOverMonthChange = prevMonthTotal > 0 
     ? ((currentMonthTotal - prevMonthTotal) / prevMonthTotal) * 100 
@@ -94,7 +94,7 @@ async function getReportData() {
   // Daily breakdown for current month
   const dailyBreakdown = currentMonthSales?.map(s => ({
     date: s.sale_date,
-    amount: s.total_amount,
+    amount: s.total_revenue,
   })).sort((a, b) => a.date.localeCompare(b.date)) || []
   
   // Best and worst days

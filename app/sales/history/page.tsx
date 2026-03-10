@@ -14,7 +14,7 @@ async function getSalesHistory() {
     .select(`
       id,
       sale_date,
-      total_amount,
+      total_revenue,
       notes,
       sales_items (
         id,
@@ -74,7 +74,7 @@ export default async function SalesHistoryPage() {
           ) : (
             <div className="space-y-6">
               {Object.entries(salesByMonth).map(([month, monthSales]) => {
-                const monthTotal = monthSales.reduce((sum, s) => sum + s.total_amount, 0)
+                const monthTotal = monthSales.reduce((sum, s) => sum + s.total_revenue, 0)
                 return (
                   <Card key={month}>
                     <CardHeader>
@@ -114,7 +114,7 @@ export default async function SalesHistoryPage() {
                               </div>
                               <div className="flex items-center gap-4">
                                 <span className="text-lg font-semibold text-foreground">
-                                  ${sale.total_amount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                                  ${sale.total_revenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                                 </span>
                                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
                               </div>

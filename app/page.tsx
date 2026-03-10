@@ -16,18 +16,18 @@ async function getDashboardData() {
   // Get today's sales
   const { data: todaySales } = await supabase
     .from("daily_sales")
-    .select("total_amount")
+    .select("total_revenue")
     .eq("sale_date", format(today, "yyyy-MM-dd"))
-    .single()
+    .maybeSingle()
 
   // Get this month's sales
   const { data: monthSales } = await supabase
     .from("daily_sales")
-    .select("total_amount")
+    .select("total_revenue")
     .gte("sale_date", format(startOfCurrentMonth, "yyyy-MM-dd"))
     .lte("sale_date", format(endOfCurrentMonth, "yyyy-MM-dd"))
 
-  const monthTotal = monthSales?.reduce((sum, s) => sum + (s.total_amount || 0), 0) || 0
+  const monthTotal = monthSales?.reduce((sum, s) => sum + (s.total_revenue || 0), 0) || 0
   const daysWithSales = monthSales?.length || 0
   const avgDaily = daysWithSales > 0 ? monthTotal / daysWithSales : 0
 
@@ -35,7 +35,7 @@ async function getDashboardData() {
   const last7Days = Array.from({ length: 7 }, (_, i) => format(subDays(today, 6 - i), "yyyy-MM-dd"))
   const { data: weekSales } = await supabase
     .from("daily_sales")
-    .select("sale_date, total_amount")
+    .select("sale_date, total_revenue")
     .in("sale_date", last7Days)
     .order("sale_date", { ascending: true })
 
@@ -48,12 +48,12 @@ async function getDashboardData() {
   // Get recent sales
   const { data: recentSales } = await supabase
     .from("daily_sales")
-    .select("id, sale_date, total_amount, notes")
+    .select("id, sale_date, total_revenue, notes")
     .order("sale_date", { ascending: false })
     .limit(5)
 
   return {
-    todayTotal: todaySales?.total_amount || 0,
+    todayTotal: todaySales?.total_revenue || 0,
     monthTotal,
     avgDaily,
     productCount: productCount || 0,
@@ -150,8 +150,8 @@ export default async function DashboardPage() {
                 <div className="space-y-3">
                   {data.last7Days.map((date) => {
                     const sale = data.weekSales.find((s) => s.sale_date === date)
-                    const amount = sale?.total_amount || 0
-                    const maxAmount = Math.max(...data.weekSales.map((s) => s.total_amount || 0), 1)
+                    const amount = sale?.total_revenue || 0
+                    const maxAmount = Math.max(...data.weekSales.map((s) => s.total_revenue || 0), 1)
                     const percentage = (amount / maxAmount) * 100
                     return (
                       <div key={date} className="flex items-center gap-3">
@@ -206,7 +206,7 @@ export default async function DashboardPage() {
                           )}
                         </div>
                         <div className="text-lg font-semibold text-foreground">
-                          ${sale.total_amount.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                          ${sale.total_revenue.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                         </div>
                       </Link>
                     ))}
