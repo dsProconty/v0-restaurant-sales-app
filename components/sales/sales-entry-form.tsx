@@ -3,16 +3,15 @@
 import { useState, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Package, Save, Minus, Plus } from "lucide-react"
+import { CalendarIcon, Package, Save, Minus, Plus, PencilLine } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -23,11 +22,38 @@ interface Product {
   category: string | null
 }
 
-export function SalesEntryForm({ products }: { products: Product[] }) {
+interface SalesEntryFormProps {
+  products: Product[]
+  initialDate?: string
+  initialEntries?: Record<string, number>
+  initialNotes?: string
+  isEditing?: boolean
+}
+
+export function SalesEntryForm({
+  products,
+  initialDate,
+  initialEntries = {},
+  initialNotes = "",
+  isEditing = false,
+}: SalesEntryFormProps) {
   const router = useRouter()
-  const [date, setDate] = useState<Date>(new Date())
-  const [entries, setEntries] = useState<Record<string, number>>({})
-  const [notes, setNotes] = useState("")
+
+  // Parsear fecha inicial correctamente
+  const parseInitialDate = () => {
+    if (initialDate) {
+      try {
+        return parseISO(initialDate + "T12:00:00")
+      } catch {
+        return new Date()
+      }
+    }
+    return new Date()
+  }
+
+  const [date, setDate] = useState<Date>(parseInitialDate())
+  const [entries, setEntries] = useState<Record<string, number>>(initialEntries)
+  const [notes, setNotes] = useState(initialNotes)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const supabase = createClient()
 
@@ -135,7 +161,7 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
         if (error) throw error
       }
 
-      toast.success("¡Ventas guardadas correctamente!")
+      toast.success(isEditing ? "¡Venta actualizada correctamente!" : "¡Ventas guardadas correctamente!")
       router.push(`/sales/${saleId}`)
     } catch (error) {
       console.error("Error guardando ventas:", error)
@@ -165,34 +191,59 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
     <form onSubmit={handleSubmit}>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
+
+          {/* Banner informativo cuando es edición */}
+          {isEditing && (
+            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <PencilLine className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-800">Modo edición</p>
+                <p className="text-sm text-blue-700 mt-0.5">
+                  Las cantidades del registro anterior están precargadas. Puedes aumentarlas, reducirlas o agregar nuevos productos.
+                </p>
+              </div>
+            </div>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Fecha de Venta</CardTitle>
-              <CardDescription>Selecciona la fecha para este registro de ventas</CardDescription>
+              <CardDescription>
+                {isEditing
+                  ? "La fecha está fijada al día que estás editando"
+                  : "Selecciona la fecha para este registro de ventas"}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
+                    disabled={isEditing}
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
+                      !date && "text-muted-foreground",
+                      isEditing && "opacity-70 cursor-not-allowed"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {date ? format(date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }) : "Selecciona una fecha"}
+                    {isEditing && (
+                      <Badge variant="secondary" className="ml-auto text-xs">Fijo</Badge>
+                    )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(d) => d && setDate(d)}
-                    initialFocus
-                    locale={es}
-                  />
-                </PopoverContent>
+                {!isEditing && (
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={(d) => d && setDate(d)}
+                      initialFocus
+                      locale={es}
+                    />
+                  </PopoverContent>
+                )}
               </Popover>
             </CardContent>
           </Card>
@@ -209,6 +260,9 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
                 <div className="grid gap-3 sm:grid-cols-2">
                   {categoryProducts.map((product) => {
                     const qty = entries[product.id] || 0
+                    const originalQty = initialEntries[product.id] || 0
+                    const changed = isEditing && qty !== originalQty
+
                     return (
                       <div
                         key={product.id}
@@ -218,7 +272,14 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
                         )}
                       >
                         <div className="flex-1 min-w-0 mr-3">
-                          <p className="font-medium text-foreground truncate">{product.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-foreground truncate">{product.name}</p>
+                            {changed && (
+                              <Badge variant="outline" className="text-xs py-0 border-orange-300 text-orange-600 shrink-0">
+                                {qty > originalQty ? `+${qty - originalQty}` : `${qty - originalQty}`}
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">
                             ${product.price.toFixed(2)} c/u
                           </p>
@@ -277,7 +338,7 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
         <div className="lg:col-span-1">
           <Card className="sticky top-4">
             <CardHeader>
-              <CardTitle>Resumen</CardTitle>
+              <CardTitle>{isEditing ? "Resumen Actualizado" : "Resumen"}</CardTitle>
               <CardDescription>{format(date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -286,10 +347,20 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
                   .filter(([, quantity]) => quantity > 0)
                   .map(([productId, quantity]) => {
                     const product = products.find((p) => p.id === productId)!
+                    const originalQty = initialEntries[productId] || 0
+                    const changed = isEditing && quantity !== originalQty
                     return (
                       <div key={productId} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
+                        <span className="text-muted-foreground flex items-center gap-1">
                           {product.name} x {quantity}
+                          {changed && (
+                            <span className={cn(
+                              "text-xs font-medium",
+                              quantity > originalQty ? "text-green-600" : "text-orange-500"
+                            )}>
+                              ({quantity > originalQty ? "+" : ""}{quantity - originalQty})
+                            </span>
+                          )}
                         </span>
                         <span className="text-foreground">
                           ${(product.price * quantity).toFixed(2)}
@@ -323,7 +394,11 @@ export function SalesEntryForm({ products }: { products: Product[] }) {
                 disabled={isSubmitting || (totalAmount === 0 && notes.trim() === "")}
               >
                 <Save className="mr-2 h-4 w-4" />
-                {isSubmitting ? "Guardando..." : "Guardar Ventas"}
+                {isSubmitting
+                  ? "Guardando..."
+                  : isEditing
+                    ? "Actualizar Ventas"
+                    : "Guardar Ventas"}
               </Button>
             </CardFooter>
           </Card>
