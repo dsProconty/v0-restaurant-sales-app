@@ -20,8 +20,9 @@ import { DeleteSaleButton } from "@/components/sales/delete-sale-button"
 async function getSaleDetails(id: string) {
   const supabase = await createClient()
   
-  // FIX #1: usar maybeSingle() en lugar de single()
-  const { data: sale } = await supabase
+  console.log("🔍 Buscando venta con ID:", id)
+
+  const { data: sale, error } = await supabase
     .from("daily_sales")
     .select(`
       id,
@@ -44,20 +45,25 @@ async function getSaleDetails(id: string) {
     .eq("id", id)
     .maybeSingle()
 
-  return sale
+  console.log("📦 Resultado:", JSON.stringify(sale))
+  console.log("❌ Error:", JSON.stringify(error))
+
+  return { sale, error }
 }
 
 export default async function SaleDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const sale = await getSaleDetails(id)
+  const { sale, error } = await getSaleDetails(id)
+
+  console.log("🏁 Sale en página:", sale ? "encontrado" : "null", "Error:", error?.message)
 
   if (!sale) {
+    console.log("⚠️ notFound() llamado para ID:", id, "Error:", error?.message)
     notFound()
   }
 
   const itemCount = sale.sales_items?.reduce((sum, item) => sum + item.quantity, 0) || 0
 
-  // Group items by category
   const itemsByCategory: Record<string, typeof sale.sales_items> = {}
   for (const item of sale.sales_items || []) {
     const category = item.products?.category || "Sin Categoría"
@@ -143,7 +149,6 @@ export default async function SaleDetailsPage({ params }: { params: Promise<{ id
                   <div className="border-t border-border mt-4 pt-4">
                     <div className="flex justify-between text-lg font-bold text-foreground">
                       <span>Total</span>
-                      {/* FIX #2: columna correcta es total_revenue */}
                       <span>${sale.total_revenue.toFixed(2)}</span>
                     </div>
                   </div>
@@ -177,7 +182,6 @@ export default async function SaleDetailsPage({ params }: { params: Promise<{ id
                   <div className="border-t border-border pt-4">
                     <div className="flex justify-between text-lg">
                       <span className="font-medium text-foreground">Ingreso Total</span>
-                      {/* FIX #2: columna correcta es total_revenue */}
                       <span className="font-bold text-primary">
                         ${sale.total_revenue.toFixed(2)}
                       </span>
