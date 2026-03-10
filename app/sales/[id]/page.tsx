@@ -50,24 +50,8 @@ export default async function SaleDetailsPage({ params }: { params: Promise<{ id
   const { id } = await params
   const { sale, error } = await getSaleDetails(id)
 
-  // Mostrar error en pantalla en lugar de 404
   if (!sale) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="rounded-lg border border-red-500 bg-red-50 p-6 text-red-900">
-            <h2 className="text-xl font-bold mb-4">⚠️ Error al cargar la venta</h2>
-            <p className="mb-2"><strong>ID buscado:</strong> {id}</p>
-            <p className="mb-2"><strong>Sale data:</strong> {sale === null ? "null" : "undefined"}</p>
-            <p className="mb-2"><strong>Error código:</strong> {error?.code || "ninguno"}</p>
-            <p className="mb-2"><strong>Error mensaje:</strong> {error?.message || "ninguno"}</p>
-            <p className="mb-2"><strong>Error detalle:</strong> {error?.details || "ninguno"}</p>
-            <p className="mb-2"><strong>Error hint:</strong> {error?.hint || "ninguno"}</p>
-          </div>
-        </main>
-      </div>
-    )
+    notFound()
   }
 
   const itemCount = sale.sales_items?.reduce((sum, item) => sum + item.quantity, 0) || 0
