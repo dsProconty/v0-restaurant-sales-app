@@ -327,13 +327,13 @@ export function SalesEntryForm({
                           </div>
 
                           {/* +/- controls with editable input */}
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <button
                               type="button"
                               onClick={() => handleDecrement(product.id)}
                               disabled={qty === 0}
                               className={cn(
-                                "flex items-center justify-center h-9 w-9 rounded-lg border font-bold transition-all shrink-0 text-lg",
+                                "flex items-center justify-center h-8 w-8 rounded-md border font-bold transition-all shrink-0 text-base leading-none",
                                 qty === 0
                                   ? "border-border text-muted-foreground/30 cursor-not-allowed bg-muted/30"
                                   : "border-border bg-white text-foreground hover:border-primary hover:text-primary hover:bg-primary/5 active:scale-95"
@@ -349,7 +349,7 @@ export function SalesEntryForm({
                               onChange={(e) => handleInputChange(product.id, e.target.value)}
                               placeholder="0"
                               className={cn(
-                                "flex-1 h-9 rounded-lg border text-center text-sm font-bold bg-background transition-colors outline-none",
+                                "w-0 min-w-0 flex-1 h-8 rounded-md border text-center text-sm font-bold bg-background transition-colors outline-none",
                                 "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                                 qty > 0
                                   ? "border-emerald-400 text-emerald-700 bg-emerald-50"
@@ -360,7 +360,7 @@ export function SalesEntryForm({
                             <button
                               type="button"
                               onClick={() => handleIncrement(product.id)}
-                              className="flex items-center justify-center h-9 w-9 rounded-lg border font-bold transition-all shrink-0 text-lg border-primary bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
+                              className="flex items-center justify-center h-8 w-8 rounded-md border font-bold transition-all shrink-0 text-base leading-none border-primary bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
                             >
                               +
                             </button>
