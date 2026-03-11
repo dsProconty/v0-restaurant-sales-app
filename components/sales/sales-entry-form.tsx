@@ -333,13 +333,13 @@ export function SalesEntryForm({
                               onClick={() => handleDecrement(product.id)}
                               disabled={qty === 0}
                               className={cn(
-                                "flex items-center justify-center h-9 w-9 rounded-lg border font-bold text-base transition-all shrink-0",
+                                "flex items-center justify-center h-9 w-9 rounded-lg border font-bold transition-all shrink-0 text-lg",
                                 qty === 0
-                                  ? "border-border text-muted-foreground/40 cursor-not-allowed"
-                                  : "border-border hover:border-primary hover:text-primary active:scale-95"
+                                  ? "border-border text-muted-foreground/30 cursor-not-allowed bg-muted/30"
+                                  : "border-border bg-white text-foreground hover:border-primary hover:text-primary hover:bg-primary/5 active:scale-95"
                               )}
                             >
-                              <span className="text-base leading-none select-none">−</span>
+                              −
                             </button>
 
                             <input
@@ -360,9 +360,9 @@ export function SalesEntryForm({
                             <button
                               type="button"
                               onClick={() => handleIncrement(product.id)}
-                              className="flex items-center justify-center h-9 w-9 rounded-lg border border-border hover:border-primary hover:text-primary active:scale-95 transition-all shrink-0"
+                              className="flex items-center justify-center h-9 w-9 rounded-lg border font-bold transition-all shrink-0 text-lg border-primary bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
                             >
-                              <span className="text-base leading-none select-none">+</span>
+                              +
                             </button>
                           </div>
 
