@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Package, Save, Minus, Plus, PencilLine, ChevronDown, ShoppingCart } from "lucide-react"
+import { CalendarIcon, Package, Save, PencilLine, ChevronDown, ShoppingCart } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -339,7 +339,7 @@ export function SalesEntryForm({
                                   : "border-border hover:border-primary hover:text-primary active:scale-95"
                               )}
                             >
-                              <Minus className="h-3.5 w-3.5" />
+                              <span className="text-base leading-none select-none">−</span>
                             </button>
 
                             <input
@@ -362,7 +362,7 @@ export function SalesEntryForm({
                               onClick={() => handleIncrement(product.id)}
                               className="flex items-center justify-center h-9 w-9 rounded-lg border border-border hover:border-primary hover:text-primary active:scale-95 transition-all shrink-0"
                             >
-                              <Plus className="h-3.5 w-3.5" />
+                              <span className="text-base leading-none select-none">+</span>
                             </button>
                           </div>
 
