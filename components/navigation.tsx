@@ -3,14 +3,15 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Package, PlusCircle, History, BarChart3 } from "lucide-react"
+import { LayoutDashboard, Package, PlusCircle, History, BarChart3, Bell } from "lucide-react"
 
 const navItems = [
-  { href: "/", label: "Inicio", icon: LayoutDashboard },
-  { href: "/products", label: "Productos", icon: Package },
-  { href: "/sales/new", label: "Nueva Venta", icon: PlusCircle },
-  { href: "/sales/history", label: "Historial", icon: History },
-  { href: "/reports", label: "Reportes", icon: BarChart3 },
+  { href: "/",              label: "Inicio",       icon: LayoutDashboard },
+  { href: "/products",      label: "Productos",    icon: Package },
+  { href: "/sales/new",     label: "Nueva Venta",  icon: PlusCircle },
+  { href: "/sales/history", label: "Historial",    icon: History },
+  { href: "/reports",       label: "Reportes",     icon: BarChart3 },
+  { href: "/reminders",     label: "Recordatorios", icon: Bell },
 ]
 
 export function Navigation() {
@@ -57,7 +58,7 @@ export function Navigation() {
 
       {/* Bottom nav - mobile only */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card md:hidden">
-        <div className="flex items-center justify-around px-2 py-2">
+        <div className="flex items-center justify-around px-1 py-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href ||
               (item.href !== "/" && pathname.startsWith(item.href))
@@ -66,14 +67,14 @@ export function Navigation() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors min-w-0",
+                  "flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors min-w-0",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground"
                 )}
               >
                 <item.icon className={cn("h-5 w-5", isActive && "text-primary")} />
-                <span className="truncate">{item.label}</span>
+                <span className="truncate text-[10px]">{item.label}</span>
               </Link>
             )
           })}
