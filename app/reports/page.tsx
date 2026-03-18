@@ -1,362 +1,265 @@
 import { createClient } from "@/lib/supabase/server"
 import { Navigation } from "@/components/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths } from "date-fns"
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  subMonths,
+  subDays,
+  eachDayOfInterval,
+} from "date-fns"
 import { es } from "date-fns/locale"
-import { TrendingUp, TrendingDown, DollarSign, Calendar, BarChart3 } from "lucide-react"
+import { ReportsDashboard } from "@/components/reports/reports-dashboard"
 
-async function getReportData() {
+// ─── Logger ────────────────────────────────────────────────────────────────
+const LOG = "[reports/page]"
+const log = (msg: string, data?: unknown) =>
+  console.log(`${LOG} ${msg}`, data !== undefined ? data : "")
+const logError = (msg: string, err?: unknown) =>
+  console.error(`${LOG} ❌ ${msg}`, err !== undefined ? err : "")
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+export interface DailyPoint {
+  date: string   // "YYYY-MM-DD"
+  label: string  // "lun 10"
+  amount: number
+}
+
+export interface CategoryStat {
+  category: string
+  revenue: number
+  quantity: number
+}
+
+export interface ProductStat {
+  name: string
+  category: string | null
+  quantity: number
+  revenue: number
+}
+
+export interface ReportData {
+  todayTotal: number
+  prevDayTotal: number
+  currentWeekTotal: number
+  prevWeekTotal: number
+  currentMonthTotal: number
+  prevMonthTotal: number
+  avgDailySales: number
+  daysRecorded: number
+  dayOverDayChange: number
+  weekOverWeekChange: number
+  monthOverMonthChange: number
+  last7Days: DailyPoint[]
+  categoryStats: CategoryStat[]
+  topProducts: ProductStat[]
+  projectedMonthTotal: number
+  monthProgressPct: number
+  daysInMonth: number
+  dayOfMonth: number
+  bestDay: { date: string; amount: number } | null
+  worstDay: { date: string; amount: number } | null
+}
+
+// ─── Data fetching ──────────────────────────────────────────────────────────
+async function getReportData(): Promise<ReportData> {
+  log("Iniciando fetch de datos...")
   const supabase = await createClient()
   const today = new Date()
-  
-  // Current month
+  const todayStr = format(today, "yyyy-MM-dd")
+  const yesterdayStr = format(subDays(today, 1), "yyyy-MM-dd")
+
   const currentMonthStart = startOfMonth(today)
   const currentMonthEnd = endOfMonth(today)
-  
-  // Previous month
   const prevMonthStart = startOfMonth(subMonths(today, 1))
   const prevMonthEnd = endOfMonth(subMonths(today, 1))
-  
-  // Current week
-  const currentWeekStart = startOfWeek(today)
-  const currentWeekEnd = endOfWeek(today)
-  
-  // Get current month sales
-  const { data: currentMonthSales } = await supabase
-    .from("daily_sales")
-    .select("total_revenue, sale_date")
-    .gte("sale_date", format(currentMonthStart, "yyyy-MM-dd"))
-    .lte("sale_date", format(currentMonthEnd, "yyyy-MM-dd"))
-  
-  // Get previous month sales
-  const { data: prevMonthSales } = await supabase
-    .from("daily_sales")
-    .select("total_revenue")
-    .gte("sale_date", format(prevMonthStart, "yyyy-MM-dd"))
-    .lte("sale_date", format(prevMonthEnd, "yyyy-MM-dd"))
-  
-  // Get current week sales
-  const { data: currentWeekSales } = await supabase
-    .from("daily_sales")
-    .select("total_revenue")
-    .gte("sale_date", format(currentWeekStart, "yyyy-MM-dd"))
-    .lte("sale_date", format(currentWeekEnd, "yyyy-MM-dd"))
-  
-  // Get top products this month
-  const { data: topProducts } = await supabase
-    .from("sales_items")
-    .select(`
-      quantity,
-      subtotal,
-      products (
-        name,
-        category
-      ),
-      daily_sales!inner (
-        sale_date
-      )
+  const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 })
+  const currentWeekEnd = endOfWeek(today, { weekStartsOn: 1 })
+  const prevWeekStart = startOfWeek(subDays(today, 7), { weekStartsOn: 1 })
+  const prevWeekEnd = endOfWeek(subDays(today, 7), { weekStartsOn: 1 })
+  const sevenDaysAgo = subDays(today, 6)
+
+  log("Rangos de fecha calculados", {
+    today: todayStr,
+    monthStart: format(currentMonthStart, "yyyy-MM-dd"),
+    sevenDaysAgo: format(sevenDaysAgo, "yyyy-MM-dd"),
+  })
+
+  // ── Queries en paralelo ─────────────────────────────────────────────────
+  const [
+    todayRes, yesterdayRes,
+    currentMonthRes, prevMonthRes,
+    currentWeekRes, prevWeekRes,
+    last7DaysRes, topProductsRes,
+  ] = await Promise.all([
+    supabase.from("daily_sales").select("total_revenue").eq("sale_date", todayStr),
+    supabase.from("daily_sales").select("total_revenue").eq("sale_date", yesterdayStr),
+    supabase.from("daily_sales").select("total_revenue, sale_date")
+      .gte("sale_date", format(currentMonthStart, "yyyy-MM-dd"))
+      .lte("sale_date", format(currentMonthEnd, "yyyy-MM-dd")),
+    supabase.from("daily_sales").select("total_revenue")
+      .gte("sale_date", format(prevMonthStart, "yyyy-MM-dd"))
+      .lte("sale_date", format(prevMonthEnd, "yyyy-MM-dd")),
+    supabase.from("daily_sales").select("total_revenue")
+      .gte("sale_date", format(currentWeekStart, "yyyy-MM-dd"))
+      .lte("sale_date", format(currentWeekEnd, "yyyy-MM-dd")),
+    supabase.from("daily_sales").select("total_revenue")
+      .gte("sale_date", format(prevWeekStart, "yyyy-MM-dd"))
+      .lte("sale_date", format(prevWeekEnd, "yyyy-MM-dd")),
+    supabase.from("daily_sales").select("total_revenue, sale_date")
+      .gte("sale_date", format(sevenDaysAgo, "yyyy-MM-dd"))
+      .lte("sale_date", todayStr),
+    supabase.from("sales_items").select(`
+      quantity, subtotal,
+      products ( name, category ),
+      daily_sales!inner ( sale_date )
     `)
-    .gte("daily_sales.sale_date", format(currentMonthStart, "yyyy-MM-dd"))
-    .lte("daily_sales.sale_date", format(currentMonthEnd, "yyyy-MM-dd"))
-  
-  // Aggregate top products
-  const productStats: Record<string, { name: string; category: string | null; quantity: number; revenue: number }> = {}
-  for (const item of topProducts || []) {
-    const name = item.products?.name || "Desconocido"
-    if (!productStats[name]) {
-      productStats[name] = {
-        name,
-        category: item.products?.category || null,
-        quantity: 0,
-        revenue: 0,
-      }
+      .gte("daily_sales.sale_date", format(currentMonthStart, "yyyy-MM-dd"))
+      .lte("daily_sales.sale_date", format(currentMonthEnd, "yyyy-MM-dd")),
+  ])
+
+  // Log errores de Supabase
+  const queryLog = [
+    { name: "today", res: todayRes },
+    { name: "yesterday", res: yesterdayRes },
+    { name: "currentMonth", res: currentMonthRes },
+    { name: "prevMonth", res: prevMonthRes },
+    { name: "currentWeek", res: currentWeekRes },
+    { name: "prevWeek", res: prevWeekRes },
+    { name: "last7Days", res: last7DaysRes },
+    { name: "topProducts", res: topProductsRes },
+  ]
+  for (const q of queryLog) {
+    if (q.res.error) {
+      logError(`Query "${q.name}" falló`, q.res.error)
+    } else {
+      log(`Query "${q.name}" OK`, { rows: q.res.data?.length ?? 0 })
     }
-    productStats[name].quantity += item.quantity
-    productStats[name].revenue += item.subtotal
   }
-  
-  const sortedProducts = Object.values(productStats)
+
+  // ── Totales ─────────────────────────────────────────────────────────────
+  const sum = (arr: { total_revenue: number }[] | null) =>
+    arr?.reduce((s, r) => s + (r.total_revenue ?? 0), 0) ?? 0
+
+  const todayTotal = sum(todayRes.data)
+  const prevDayTotal = sum(yesterdayRes.data)
+  const currentMonthTotal = sum(currentMonthRes.data)
+  const prevMonthTotal = sum(prevMonthRes.data)
+  const currentWeekTotal = sum(currentWeekRes.data)
+  const prevWeekTotal = sum(prevWeekRes.data)
+
+  const pct = (curr: number, prev: number) =>
+    prev > 0 ? ((curr - prev) / prev) * 100 : 0
+
+  const daysRecorded = currentMonthRes.data?.length ?? 0
+  const avgDailySales = daysRecorded > 0 ? currentMonthTotal / daysRecorded : 0
+
+  log("Totales calculados", { todayTotal, currentMonthTotal, prevMonthTotal })
+
+  // ── Últimos 7 días (chart) ───────────────────────────────────────────────
+  const salesMap: Record<string, number> = {}
+  for (const row of last7DaysRes.data ?? []) {
+    salesMap[row.sale_date] = (salesMap[row.sale_date] ?? 0) + row.total_revenue
+  }
+  const last7Days: DailyPoint[] = eachDayOfInterval({ start: sevenDaysAgo, end: today }).map(d => ({
+    date: format(d, "yyyy-MM-dd"),
+    label: format(d, "EEE d", { locale: es }),
+    amount: salesMap[format(d, "yyyy-MM-dd")] ?? 0,
+  }))
+
+  // ── Categorías y productos ───────────────────────────────────────────────
+  const catMap: Record<string, { revenue: number; quantity: number }> = {}
+  const productMap: Record<string, ProductStat> = {}
+
+  for (const item of topProductsRes.data ?? []) {
+    const p = item.products as { name?: string; category?: string | null } | null
+    const cat = p?.category ?? "Sin categoría"
+    const name = p?.name ?? "Desconocido"
+    const qty = item.quantity ?? 0
+    const rev = item.subtotal ?? 0
+
+    if (!catMap[cat]) catMap[cat] = { revenue: 0, quantity: 0 }
+    catMap[cat].revenue += rev
+    catMap[cat].quantity += qty
+
+    if (!productMap[name]) productMap[name] = { name, category: cat, quantity: 0, revenue: 0 }
+    productMap[name].quantity += qty
+    productMap[name].revenue += rev
+  }
+
+  const categoryStats: CategoryStat[] = Object.entries(catMap)
+    .map(([category, s]) => ({ category, ...s }))
+    .sort((a, b) => b.revenue - a.revenue)
+
+  const topProducts: ProductStat[] = Object.values(productMap)
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 10)
-  
-  // Calculate totals
-  const currentMonthTotal = currentMonthSales?.reduce((sum, s) => sum + s.total_revenue, 0) || 0
-  const prevMonthTotal = prevMonthSales?.reduce((sum, s) => sum + s.total_revenue, 0) || 0
-  const currentWeekTotal = currentWeekSales?.reduce((sum, s) => sum + s.total_revenue, 0) || 0
-  
-  const monthOverMonthChange = prevMonthTotal > 0 
-    ? ((currentMonthTotal - prevMonthTotal) / prevMonthTotal) * 100 
+
+  log("Categorías", categoryStats)
+
+  // ── Mejor / peor día ─────────────────────────────────────────────────────
+  const daily = (currentMonthRes.data ?? [])
+    .map(s => ({ date: s.sale_date, amount: s.total_revenue }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+
+  const bestDay = daily.length > 0 ? daily.reduce((b, d) => d.amount > b.amount ? d : b) : null
+  const worstDay = daily.length > 0 ? daily.reduce((w, d) => d.amount < w.amount ? d : w) : null
+
+  // ── Proyección ───────────────────────────────────────────────────────────
+  const dayOfMonth = today.getDate()
+  const daysInMonth = endOfMonth(today).getDate()
+  const projectedMonthTotal = daysRecorded > 0
+    ? (currentMonthTotal / dayOfMonth) * daysInMonth
     : 0
-  
-  const daysRecorded = currentMonthSales?.length || 0
-  const avgDailySales = daysRecorded > 0 ? currentMonthTotal / daysRecorded : 0
-  
-  // Daily breakdown for current month
-  const dailyBreakdown = currentMonthSales?.map(s => ({
-    date: s.sale_date,
-    amount: s.total_revenue,
-  })).sort((a, b) => a.date.localeCompare(b.date)) || []
-  
-  // Best and worst days
-  const bestDay = dailyBreakdown.length > 0 
-    ? dailyBreakdown.reduce((best, day) => day.amount > best.amount ? day : best)
-    : null
-  const worstDay = dailyBreakdown.length > 0 
-    ? dailyBreakdown.reduce((worst, day) => day.amount < worst.amount ? day : worst)
-    : null
-  
+  const monthProgressPct = Math.round((dayOfMonth / daysInMonth) * 100)
+
+  log("Proyección", { projectedMonthTotal: projectedMonthTotal.toFixed(2), monthProgressPct })
+  log("Fetch completo ✓")
+
   return {
-    currentMonthTotal,
-    prevMonthTotal,
-    currentWeekTotal,
-    monthOverMonthChange,
-    daysRecorded,
-    avgDailySales,
-    topProducts: sortedProducts,
-    bestDay,
-    worstDay,
-    dailyBreakdown,
+    todayTotal, prevDayTotal,
+    currentWeekTotal, prevWeekTotal,
+    currentMonthTotal, prevMonthTotal,
+    avgDailySales, daysRecorded,
+    dayOverDayChange: pct(todayTotal, prevDayTotal),
+    weekOverWeekChange: pct(currentWeekTotal, prevWeekTotal),
+    monthOverMonthChange: pct(currentMonthTotal, prevMonthTotal),
+    last7Days, categoryStats, topProducts,
+    projectedMonthTotal, monthProgressPct, daysInMonth, dayOfMonth,
+    bestDay, worstDay,
   }
 }
 
+// ─── Page ────────────────────────────────────────────────────────────────────
 export default async function ReportsPage() {
-  const data = await getReportData()
-  const today = new Date()
-  
+  log("Renderizando ReportsPage")
+  let data: ReportData
+
+  try {
+    data = await getReportData()
+  } catch (err) {
+    logError("Error no controlado en getReportData", err)
+    const today = new Date()
+    data = {
+      todayTotal: 0, prevDayTotal: 0,
+      currentWeekTotal: 0, prevWeekTotal: 0,
+      currentMonthTotal: 0, prevMonthTotal: 0,
+      avgDailySales: 0, daysRecorded: 0,
+      dayOverDayChange: 0, weekOverWeekChange: 0, monthOverMonthChange: 0,
+      last7Days: [], categoryStats: [], topProducts: [],
+      projectedMonthTotal: 0, monthProgressPct: 0,
+      daysInMonth: endOfMonth(today).getDate(), dayOfMonth: today.getDate(),
+      bestDay: null, worstDay: null,
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-8">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Reportes</h1>
-            <p className="text-muted-foreground">
-              Análisis de ventas e información de rendimiento
-            </p>
-          </div>
-          
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Este Mes</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  ${data.currentMonthTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                </div>
-                <div className="flex items-center gap-1 text-xs">
-                  {data.monthOverMonthChange >= 0 ? (
-                    <>
-                      <TrendingUp className="h-3 w-3 text-green-600" />
-                      <span className="text-green-600">+{data.monthOverMonthChange.toFixed(1)}%</span>
-                    </>
-                  ) : (
-                    <>
-                      <TrendingDown className="h-3 w-3 text-red-600" />
-                      <span className="text-red-600">{data.monthOverMonthChange.toFixed(1)}%</span>
-                    </>
-                  )}
-                  <span className="text-muted-foreground">vs mes anterior</span>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Esta Semana</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  ${data.currentWeekTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {format(startOfWeek(today), "d 'de' MMM", { locale: es })} - {format(endOfWeek(today), "d 'de' MMM", { locale: es })}
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Promedio Diario</CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  ${data.avgDailySales.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Basado en {data.daysRecorded} días registrados
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Mes Anterior</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  ${data.prevMonthTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {format(subMonths(today, 1), "MMMM yyyy", { locale: es })}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Productos Más Vendidos Este Mes</CardTitle>
-                <CardDescription>Mejores artículos por ingresos</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {data.topProducts.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    No hay datos de ventas para este mes aún
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {data.topProducts.map((product, index) => {
-                      const maxRevenue = data.topProducts[0]?.revenue || 1
-                      const percentage = (product.revenue / maxRevenue) * 100
-                      return (
-                        <div key={product.name} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-                                {index + 1}
-                              </span>
-                              <div>
-                                <p className="font-medium text-foreground">{product.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {product.quantity} vendidos
-                                  {product.category && ` • ${product.category}`}
-                                </p>
-                              </div>
-                            </div>
-                            <span className="font-semibold text-foreground">
-                              ${product.revenue.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="h-2 rounded-full bg-muted overflow-hidden">
-                            <div
-                              className="h-full bg-primary transition-all"
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Destacados del Rendimiento</CardTitle>
-                <CardDescription>Información clave de {format(today, "MMMM yyyy", { locale: es })}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {data.bestDay && (
-                  <div className="rounded-lg border border-border p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="h-5 w-5 text-green-600" />
-                      <span className="font-medium text-foreground">Mejor Día</span>
-                    </div>
-                    <p className="text-2xl font-bold text-foreground">
-                      ${data.bestDay.amount.toFixed(2)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(data.bestDay.date + "T12:00:00"), "EEEE, d 'de' MMMM", { locale: es })}
-                    </p>
-                  </div>
-                )}
-                
-                {data.worstDay && (
-                  <div className="rounded-lg border border-border p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingDown className="h-5 w-5 text-muted-foreground" />
-                      <span className="font-medium text-foreground">Día Más Lento</span>
-                    </div>
-                    <p className="text-2xl font-bold text-foreground">
-                      ${data.worstDay.amount.toFixed(2)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(data.worstDay.date + "T12:00:00"), "EEEE, d 'de' MMMM", { locale: es })}
-                    </p>
-                  </div>
-                )}
-                
-                {!data.bestDay && !data.worstDay && (
-                  <p className="text-center text-muted-foreground py-8">
-                    Registra algunas ventas para ver los destacados de rendimiento
-                  </p>
-                )}
-                
-                <div className="rounded-lg bg-muted p-4">
-                  <h4 className="font-medium text-foreground mb-2">Estadísticas Rápidas</h4>
-                  <dl className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Días Registrados</dt>
-                      <dd className="font-medium text-foreground">{data.daysRecorded}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Productos Rastreados</dt>
-                      <dd className="font-medium text-foreground">{data.topProducts.length}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Progreso del Mes</dt>
-                      <dd className="font-medium text-foreground">
-                        {Math.round((today.getDate() / endOfMonth(today).getDate()) * 100)}%
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {data.dailyBreakdown.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Ventas Diarias - {format(today, "MMMM yyyy", { locale: es })}</CardTitle>
-                <CardDescription>Desglose de ingresos por día</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {data.dailyBreakdown.map((day) => {
-                    const maxAmount = Math.max(...data.dailyBreakdown.map(d => d.amount))
-                    const percentage = maxAmount > 0 ? (day.amount / maxAmount) * 100 : 0
-                    return (
-                      <div key={day.date} className="flex items-center gap-3">
-                        <div className="w-24 text-sm text-muted-foreground">
-                          {format(new Date(day.date + "T12:00:00"), "d 'de' MMM", { locale: es })}
-                        </div>
-                        <div className="flex-1">
-                          <div className="h-6 rounded-md bg-muted overflow-hidden">
-                            <div
-                              className="h-full bg-primary transition-all"
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div className="w-24 text-right text-sm font-medium text-foreground">
-                          ${day.amount.toFixed(2)}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 pb-24 md:pb-8">
+        <ReportsDashboard data={data} />
       </main>
     </div>
   )
