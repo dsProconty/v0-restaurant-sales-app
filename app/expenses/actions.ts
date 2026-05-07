@@ -33,7 +33,7 @@ export async function createExpenseCategory(formData: FormData) {
 
   if (error) {
     console.error("[ExpenseCategories] Error creating category:", error)
-    return { error: "Error al crear la categoría" }
+    return { error: `Error al crear la categoría: ${error.message}` }
   }
 
   revalidatePath("/expenses/categories")
@@ -118,7 +118,7 @@ export async function createSupplier(formData: FormData) {
 
   if (error) {
     console.error("[Suppliers] Error creating supplier:", error)
-    return { error: "Error al crear el proveedor" }
+    return { error: `Error al crear el proveedor: ${error.message}` }
   }
 
   revalidatePath("/expenses/suppliers")
