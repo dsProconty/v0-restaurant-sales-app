@@ -1,7 +1,6 @@
 import { getExpenses, getExpenseCategories } from "./actions"
 import { ExpenseList } from "@/components/expenses/expense-list"
 import { NewExpenseDialog } from "@/components/expenses/new-expense-dialog"
-import { Navigation } from "@/components/navigation"
 
 export default async function ExpensesPage() {
   const [expenses, categories] = await Promise.all([
@@ -25,9 +24,7 @@ export default async function ExpensesPage() {
     .reduce((sum, e) => sum + Number(e.amount), 0)
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-    <main className="mx-auto max-w-4xl px-4 py-6 pb-24 md:pb-6 space-y-6">
+    <main className="mx-auto max-w-4xl px-4 py-6 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -56,6 +53,5 @@ export default async function ExpensesPage() {
       {/* List */}
       <ExpenseList expenses={expenses} categories={categories} />
     </main>
-    </div>
   )
 }

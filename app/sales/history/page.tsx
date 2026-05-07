@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { format } from "date-fns"
@@ -36,8 +35,7 @@ export default async function SalesHistoryPage() {
   const grandTotal = sales.reduce((sum, s) => sum + (s.total_revenue || 0), 0)
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <div>
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
 
         {/* Header */}

@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Navigation } from "@/components/navigation"
 import {
   format,
   startOfMonth,
@@ -256,9 +255,8 @@ export default async function ReportsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 pb-24 md:pb-8">
+    <div>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <ReportsDashboard data={data} />
       </main>
     </div>

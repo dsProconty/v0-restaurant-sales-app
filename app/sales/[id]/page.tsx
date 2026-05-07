@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -48,8 +47,7 @@ export default async function SaleDetailsPage({ params }: { params: Promise<{ id
   ]
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <div>
       <main className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
 
         {/* ── Header ── */}
