@@ -22,7 +22,7 @@ interface Category {
   color: string
 }
 
-export function ExpenseForm({ categories }: { categories: Category[] }) {
+export function ExpenseForm({ categories, onSuccess }: { categories: Category[]; onSuccess?: () => void }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -60,7 +60,11 @@ export function ExpenseForm({ categories }: { categories: Category[] }) {
         toast.error(result.error)
       } else {
         toast.success("Gasto registrado")
-        router.push("/expenses")
+        if (onSuccess) {
+          onSuccess()
+        } else {
+          router.push("/expenses")
+        }
       }
     })
   }
