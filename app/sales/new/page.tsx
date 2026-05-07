@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { Navigation } from "@/components/navigation"
 import { SalesEntryForm } from "@/components/sales/sales-entry-form"
 
 async function getProducts() {
@@ -53,8 +52,7 @@ export default async function NewSalePage({
   const isEditing = !!existingSale
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
+    <div>
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-8">
           <div>

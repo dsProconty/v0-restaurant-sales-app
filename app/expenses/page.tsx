@@ -1,9 +1,6 @@
-import Link from "next/link"
 import { getExpenses, getExpenseCategories } from "./actions"
 import { ExpenseList } from "@/components/expenses/expense-list"
-import { Button } from "@/components/ui/button"
-import { Navigation } from "@/components/navigation"
-import { PlusCircle, Tag } from "lucide-react"
+import { NewExpenseDialog } from "@/components/expenses/new-expense-dialog"
 
 export default async function ExpensesPage() {
   const [expenses, categories] = await Promise.all([
@@ -27,29 +24,14 @@ export default async function ExpensesPage() {
     .reduce((sum, e) => sum + Number(e.amount), 0)
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-    <main className="mx-auto max-w-4xl px-4 py-6 pb-24 md:pb-6 space-y-6">
+    <main className="mx-auto max-w-4xl px-4 py-6 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Gastos</h1>
           <p className="text-sm text-muted-foreground">Registro de gastos diarios del restaurante</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/expenses/categories">
-              <Tag className="h-4 w-4 mr-1" />
-              Categorías
-            </Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link href="/expenses/new">
-              <PlusCircle className="h-4 w-4 mr-1" />
-              Nuevo gasto
-            </Link>
-          </Button>
-        </div>
+        <NewExpenseDialog categories={categories} />
       </div>
 
       {/* KPI cards */}
@@ -71,6 +53,5 @@ export default async function ExpensesPage() {
       {/* List */}
       <ExpenseList expenses={expenses} categories={categories} />
     </main>
-    </div>
   )
 }

@@ -1,4 +1,3 @@
-import { Navigation } from "@/components/navigation"
 import { getReminders } from "@/app/reminders/actions"
 import { RemindersList } from "@/components/reminders/reminders-list"
 import { CreateReminderForm } from "@/components/reminders/create-reminder-form"
@@ -28,9 +27,8 @@ export default async function RemindersPage() {
   const urgent   = overdue.length + today.length
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8 pb-24 md:pb-8">
+    <div>
+      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-8">
 
           {/* Header */}
