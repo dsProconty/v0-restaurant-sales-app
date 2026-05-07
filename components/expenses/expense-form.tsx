@@ -22,16 +22,29 @@ interface Category {
   color: string
 }
 
-export function ExpenseForm({ categories, onSuccess }: { categories: Category[]; onSuccess?: () => void }) {
+interface Supplier {
+  id: string
+  name: string
+}
+
+export function ExpenseForm({
+  categories,
+  suppliers,
+  onSuccess,
+}: {
+  categories: Category[]
+  suppliers: Supplier[]
+  onSuccess?: () => void
+}) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [date, setDate] = useState<Date>(new Date())
   const [calOpen, setCalOpen] = useState(false)
   const [categoryId, setCategoryId] = useState<string>("none")
+  const [supplierId, setSupplierId] = useState<string>("none")
   const [amount, setAmount] = useState("")
   const [amountWithoutTax, setAmountWithoutTax] = useState("")
-  const [supplier, setSupplier] = useState("")
   const [description, setDescription] = useState("")
   const [notes, setNotes] = useState("")
 
@@ -46,8 +59,12 @@ export function ExpenseForm({ categories, onSuccess }: { categories: Category[];
     const formData = new FormData()
     formData.set("date", format(date, "yyyy-MM-dd"))
     if (categoryId && categoryId !== "none") formData.set("category_id", categoryId)
-    if (supplier.trim()) formData.set("supplier", supplier.trim())
+    if (supplierId && supplierId !== "none") {
+      const s = suppliers.find((s) => s.id === supplierId)
+      if (s) formData.set("supplier", s.name)
+    }
     if (description.trim()) formData.set("description", description.trim())
+
     formData.set("amount", amount)
     if (amountWithoutTax.trim()) formData.set("amount_without_tax", amountWithoutTax)
     if (notes.trim()) formData.set("notes", notes.trim())
@@ -122,11 +139,19 @@ export function ExpenseForm({ categories, onSuccess }: { categories: Category[];
       {/* Proveedor */}
       <div className="space-y-1.5">
         <Label>Proveedor</Label>
-        <Input
-          placeholder="ej: Distribuidora Central"
-          value={supplier}
-          onChange={(e) => setSupplier(e.target.value)}
-        />
+        <Select value={supplierId} onValueChange={setSupplierId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Sin proveedor" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Sin proveedor</SelectItem>
+            {suppliers.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Descripción */}

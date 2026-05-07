@@ -13,7 +13,18 @@ interface Category {
   color: string
 }
 
-export function NewExpenseDialog({ categories }: { categories: Category[] }) {
+interface Supplier {
+  id: string
+  name: string
+}
+
+export function NewExpenseDialog({
+  categories,
+  suppliers,
+}: {
+  categories: Category[]
+  suppliers: Supplier[]
+}) {
   const [open, setOpen] = useState(false)
   const router = useRouter()
 
@@ -34,7 +45,7 @@ export function NewExpenseDialog({ categories }: { categories: Category[] }) {
         <DialogHeader>
           <DialogTitle>Nuevo gasto</DialogTitle>
         </DialogHeader>
-        <ExpenseForm categories={categories} onSuccess={handleSuccess} />
+        <ExpenseForm categories={categories} suppliers={suppliers} onSuccess={handleSuccess} />
       </DialogContent>
     </Dialog>
   )

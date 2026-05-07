@@ -1,11 +1,12 @@
-import { getExpenses, getExpenseCategories } from "./actions"
+import { getExpenses, getExpenseCategories, getSuppliers } from "./actions"
 import { ExpenseList } from "@/components/expenses/expense-list"
 import { NewExpenseDialog } from "@/components/expenses/new-expense-dialog"
 
 export default async function ExpensesPage() {
-  const [expenses, categories] = await Promise.all([
+  const [expenses, categories, suppliers] = await Promise.all([
     getExpenses(),
     getExpenseCategories(),
+    getSuppliers(),
   ])
 
   const totalMonth = expenses
@@ -31,7 +32,7 @@ export default async function ExpensesPage() {
           <h1 className="text-2xl font-bold text-foreground">Gastos</h1>
           <p className="text-sm text-muted-foreground">Registro de gastos diarios del restaurante</p>
         </div>
-        <NewExpenseDialog categories={categories} />
+        <NewExpenseDialog categories={categories} suppliers={suppliers} />
       </div>
 
       {/* KPI cards */}

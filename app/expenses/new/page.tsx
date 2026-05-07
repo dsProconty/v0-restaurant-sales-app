@@ -1,10 +1,13 @@
-import { getExpenseCategories } from "@/app/expenses/actions"
+import { getExpenseCategories, getSuppliers } from "@/app/expenses/actions"
 import { ExpenseForm } from "@/components/expenses/expense-form"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 export default async function NewExpensePage() {
-  const categories = await getExpenseCategories()
+  const [categories, suppliers] = await Promise.all([
+    getExpenseCategories(),
+    getSuppliers(),
+  ])
 
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-6">
@@ -18,7 +21,7 @@ export default async function NewExpensePage() {
         </div>
       </div>
       <div className="rounded-xl border border-border bg-card p-5">
-        <ExpenseForm categories={categories} />
+        <ExpenseForm categories={categories} suppliers={suppliers} />
       </div>
     </main>
   )
