@@ -1,5 +1,6 @@
 import { getExpenseCategories } from "@/app/expenses/actions"
 import { CategoryManager } from "@/components/expenses/category-manager"
+import { Navigation } from "@/components/navigation"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
@@ -7,7 +8,9 @@ export default async function ExpenseCategoriesPage() {
   const categories = await getExpenseCategories()
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-6 space-y-6">
+    <div className="min-h-screen bg-background">
+      <Navigation />
+    <main className="mx-auto max-w-lg px-4 py-6 pb-24 md:pb-6 space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/expenses" className="text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-5 w-5" />
@@ -20,5 +23,6 @@ export default async function ExpenseCategoriesPage() {
 
       <CategoryManager initialCategories={categories} />
     </main>
+    </div>
   )
 }

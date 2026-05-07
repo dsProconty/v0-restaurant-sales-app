@@ -28,7 +28,7 @@ export function ExpenseForm({ categories }: { categories: Category[] }) {
 
   const [date, setDate] = useState<Date>(new Date())
   const [calOpen, setCalOpen] = useState(false)
-  const [categoryId, setCategoryId] = useState<string>("")
+  const [categoryId, setCategoryId] = useState<string>("none")
   const [amount, setAmount] = useState("")
   const [amountWithoutTax, setAmountWithoutTax] = useState("")
   const [supplier, setSupplier] = useState("")
@@ -45,7 +45,7 @@ export function ExpenseForm({ categories }: { categories: Category[] }) {
     e.preventDefault()
     const formData = new FormData()
     formData.set("date", format(date, "yyyy-MM-dd"))
-    if (categoryId) formData.set("category_id", categoryId)
+    if (categoryId && categoryId !== "none") formData.set("category_id", categoryId)
     if (supplier.trim()) formData.set("supplier", supplier.trim())
     if (description.trim()) formData.set("description", description.trim())
     formData.set("amount", amount)
@@ -99,7 +99,7 @@ export function ExpenseForm({ categories }: { categories: Category[] }) {
             <SelectValue placeholder="Sin categoría" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Sin categoría</SelectItem>
+            <SelectItem value="none">Sin categoría</SelectItem>
             {categories.map((c) => (
               <SelectItem key={c.id} value={c.id}>
                 <span className="flex items-center gap-2">
