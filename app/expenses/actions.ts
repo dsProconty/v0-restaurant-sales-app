@@ -223,6 +223,33 @@ export async function createExpense(formData: FormData) {
   return { success: true }
 }
 
+export async function updateExpense(id: string, formData: FormData) {
+  const supabase = await createClient()
+
+  const date = formData.get("date") as string
+  const category_id = (formData.get("category_id") as string) || null
+  const supplier = (formData.get("supplier") as string) || null
+  const description = (formData.get("description") as string) || null
+  const amount = parseFloat(formData.get("amount") as string)
+  const notes = (formData.get("notes") as string) || null
+
+  if (!date) return { error: "La fecha es requerida" }
+  if (isNaN(amount) || amount <= 0) return { error: "El monto debe ser mayor a 0" }
+
+  const { error } = await supabase
+    .from("expenses")
+    .update({ date, category_id, supplier, description, amount, amount_without_tax: null, tax_amount: null, notes })
+    .eq("id", id)
+
+  if (error) {
+    console.error("[Expenses] Error updating expense:", error)
+    return { error: `Error al actualizar: ${error.message}` }
+  }
+
+  revalidatePath("/expenses")
+  return { success: true }
+}
+
 export async function deleteExpense(id: string) {
   const supabase = await createClient()
 

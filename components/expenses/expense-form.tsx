@@ -44,15 +44,8 @@ export function ExpenseForm({
   const [categoryId, setCategoryId] = useState<string>("none")
   const [supplierId, setSupplierId] = useState<string>("none")
   const [amount, setAmount] = useState("")
-  const [amountWithoutTax, setAmountWithoutTax] = useState("")
   const [description, setDescription] = useState("")
   const [notes, setNotes] = useState("")
-
-  // Auto-calculate tax when amount and amount_without_tax are filled
-  const taxAmount =
-    amount && amountWithoutTax && !isNaN(parseFloat(amount)) && !isNaN(parseFloat(amountWithoutTax))
-      ? (parseFloat(amount) - parseFloat(amountWithoutTax)).toFixed(2)
-      : null
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -64,12 +57,8 @@ export function ExpenseForm({
       if (s) formData.set("supplier", s.name)
     }
     if (description.trim()) formData.set("description", description.trim())
-
     formData.set("amount", amount)
-    if (amountWithoutTax.trim()) formData.set("amount_without_tax", amountWithoutTax)
     if (notes.trim()) formData.set("notes", notes.trim())
-
-    console.log("[ExpenseForm] Submitting expense for date:", format(date, "yyyy-MM-dd"))
 
     startTransition(async () => {
       const result = await createExpense(formData)
@@ -164,46 +153,22 @@ export function ExpenseForm({
         />
       </div>
 
-      {/* Montos */}
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label>Monto total *</Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-            <Input
-              className="pl-7"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
-          </div>
+      {/* Monto */}
+      <div className="space-y-1.5">
+        <Label>Monto total factura *</Label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+          <Input
+            className="pl-7"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+          />
         </div>
-
-        <div className="space-y-1.5">
-          <Label>Monto sin IVA <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-            <Input
-              className="pl-7"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={amountWithoutTax}
-              onChange={(e) => setAmountWithoutTax(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {taxAmount !== null && (
-          <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2">
-            IVA calculado: <span className="font-semibold text-foreground">${taxAmount}</span>
-          </p>
-        )}
       </div>
 
       {/* Notas */}
