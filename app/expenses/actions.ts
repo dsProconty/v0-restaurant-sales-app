@@ -83,6 +83,85 @@ export async function deleteExpenseCategory(id: string) {
   return { success: true }
 }
 
+// ── Suppliers (Proveedores) ──────────────────────────────────────────────────
+
+export async function getSuppliers() {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("suppliers")
+    .select("*")
+    .order("name")
+
+  if (error) {
+    console.error("[Suppliers] Error fetching suppliers:", error)
+    return []
+  }
+  return data
+}
+
+export async function createSupplier(formData: FormData) {
+  const supabase = await createClient()
+  const name = formData.get("name") as string
+  const contact = (formData.get("contact") as string) || null
+  const phone = (formData.get("phone") as string) || null
+  const notes = (formData.get("notes") as string) || null
+
+  if (!name?.trim()) return { error: "El nombre es requerido" }
+
+  const { error } = await supabase.from("suppliers").insert({
+    name: name.trim(),
+    contact,
+    phone,
+    notes,
+    is_active: true,
+  })
+
+  if (error) {
+    console.error("[Suppliers] Error creating supplier:", error)
+    return { error: "Error al crear el proveedor" }
+  }
+
+  revalidatePath("/expenses/suppliers")
+  return { success: true }
+}
+
+export async function updateSupplier(id: string, formData: FormData) {
+  const supabase = await createClient()
+  const name = formData.get("name") as string
+  const contact = (formData.get("contact") as string) || null
+  const phone = (formData.get("phone") as string) || null
+  const notes = (formData.get("notes") as string) || null
+  const is_active = formData.get("is_active") === "on"
+
+  if (!name?.trim()) return { error: "El nombre es requerido" }
+
+  const { error } = await supabase
+    .from("suppliers")
+    .update({ name: name.trim(), contact, phone, notes, is_active })
+    .eq("id", id)
+
+  if (error) {
+    console.error("[Suppliers] Error updating supplier:", error)
+    return { error: "Error al actualizar el proveedor" }
+  }
+
+  revalidatePath("/expenses/suppliers")
+  return { success: true }
+}
+
+export async function deleteSupplier(id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase.from("suppliers").delete().eq("id", id)
+
+  if (error) {
+    console.error("[Suppliers] Error deleting supplier:", error)
+    return { error: "Error al eliminar el proveedor" }
+  }
+
+  revalidatePath("/expenses/suppliers")
+  return { success: true }
+}
+
 // ── Expenses ──────────────────────────────────────────────────────────────────
 
 export async function getExpenses(filters?: { from?: string; to?: string; category_id?: string }) {

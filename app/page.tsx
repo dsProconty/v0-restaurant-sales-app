@@ -17,7 +17,7 @@ import {
 import { format, startOfMonth, endOfMonth } from "date-fns"
 import { es } from "date-fns/locale"
 import { getReminders } from "@/app/reminders/actions"
-import { getExpenses, getExpenseCategories } from "@/app/expenses/actions"
+import { getExpenses, getSuppliers } from "@/app/expenses/actions"
 import { RemindersWidget } from "@/components/reminders/reminders-widget"
 
 async function getDashboardData() {
@@ -59,11 +59,11 @@ export default async function DashboardPage() {
   const today = new Date()
   const todayStr = format(today, "yyyy-MM-dd")
 
-  const [data, reminders, expenses, categories] = await Promise.all([
+  const [data, reminders, expenses, suppliers] = await Promise.all([
     getDashboardData(),
     getReminders().catch(() => []),
     getExpenses().catch(() => []),
-    getExpenseCategories().catch(() => []),
+    getSuppliers().catch(() => []),
   ])
 
   const todayExpenses = expenses
@@ -171,8 +171,8 @@ export default async function DashboardPage() {
                 <Truck className="h-4 w-4 text-orange-500" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-foreground">{categories.length}</p>
-            <Link href="/expenses/categories" className="text-[11px] text-primary hover:underline mt-2 block">
+            <p className="text-2xl font-bold text-foreground">{suppliers.length}</p>
+            <Link href="/expenses/suppliers" className="text-[11px] text-primary hover:underline mt-2 block">
               Ver proveedores
             </Link>
           </CardContent>
@@ -202,7 +202,7 @@ export default async function DashboardPage() {
           </Link>
 
           <Link
-            href="/expenses/categories"
+            href="/expenses/suppliers"
             className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all duration-200 group"
           >
             <div className="flex items-center gap-3">
@@ -211,7 +211,7 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground">Proveedores</p>
-                <p className="text-xs text-muted-foreground">{categories.length} registrados</p>
+                <p className="text-xs text-muted-foreground">{suppliers.length} registrados</p>
               </div>
             </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />

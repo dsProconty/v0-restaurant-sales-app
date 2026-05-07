@@ -13,6 +13,7 @@ import {
   Bell,
   Package,
   Truck,
+  Tag,
   ChevronDown,
   BookOpen,
   X,
@@ -72,10 +73,13 @@ const NAV_ITEMS = {
     icon: Receipt,
     match: (p: string) =>
       p === "/expenses" ||
-      (p.startsWith("/expenses/") && !p.startsWith("/expenses/categories")),
+      (p.startsWith("/expenses/") &&
+        !p.startsWith("/expenses/categories") &&
+        !p.startsWith("/expenses/suppliers")),
   },
   productos: { href: "/products", label: "Productos", icon: Package },
-  proveedores: { href: "/expenses/categories", label: "Proveedores", icon: Truck },
+  categoriasGastos: { href: "/expenses/categories", label: "Categorías de Gastos", icon: Tag },
+  proveedores: { href: "/expenses/suppliers", label: "Proveedores", icon: Truck },
   recordatorios: { href: "/reminders", label: "Recordatorios", icon: Bell },
 }
 
@@ -87,7 +91,9 @@ interface SidebarProps {
 export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname()
   const catalogosActive =
-    pathname.startsWith("/products") || pathname.startsWith("/expenses/categories")
+    pathname.startsWith("/products") ||
+    pathname.startsWith("/expenses/categories") ||
+    pathname.startsWith("/expenses/suppliers")
   const [catalogosOpen, setCatalogosOpen] = useState(catalogosActive)
 
   return (
@@ -155,11 +161,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <div
           className={cn(
             "overflow-hidden transition-all duration-300 ease-in-out",
-            catalogosOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+            catalogosOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
           )}
         >
           <div className="pl-3 flex flex-col gap-0.5 pt-0.5">
             <NavItem item={NAV_ITEMS.productos} onClick={onClose} />
+            <NavItem item={NAV_ITEMS.categoriasGastos} onClick={onClose} />
             <NavItem item={NAV_ITEMS.proveedores} onClick={onClose} />
           </div>
         </div>
