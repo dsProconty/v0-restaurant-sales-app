@@ -16,8 +16,8 @@ export default async function ExpenseCategoriesPage() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-foreground">Categorías de gastos</h1>
-          <p className="text-sm text-muted-foreground">Crea y administra tus propias categorías</p>
+          <h1 className="text-xl font-bold text-foreground">Proveedores</h1>
+          <p className="text-sm text-muted-foreground">Administra las categorías de tus gastos</p>
         </div>
       </div>
 

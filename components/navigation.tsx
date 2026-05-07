@@ -3,15 +3,16 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Package, PlusCircle, History, BarChart3, Bell, Receipt } from "lucide-react"
+import { LayoutDashboard, Package, PlusCircle, History, BarChart3, Bell, Receipt, Truck } from "lucide-react"
 
 const navItems = [
-  { href: "/",              label: "Inicio",       icon: LayoutDashboard },
-  { href: "/products",      label: "Productos",    icon: Package },
-  { href: "/sales/new",     label: "Nueva Venta",  icon: PlusCircle },
-  { href: "/sales/history", label: "Historial",    icon: History },
-  { href: "/reports",       label: "Reportes",     icon: BarChart3 },
-  { href: "/expenses",      label: "Gastos",       icon: Receipt },
+  { href: "/",              label: "Inicio",        icon: LayoutDashboard },
+  { href: "/products",      label: "Productos",     icon: Package },
+  { href: "/sales/new",     label: "Nueva Venta",   icon: PlusCircle },
+  { href: "/sales/history", label: "Historial",     icon: History },
+  { href: "/reports",       label: "Reportes",      icon: BarChart3 },
+  { href: "/expenses",      label: "Gastos",        icon: Receipt },
+  { href: "/expenses/categories", label: "Proveedores", icon: Truck },
   { href: "/reminders",     label: "Recordatorios", icon: Bell },
 ]
 
