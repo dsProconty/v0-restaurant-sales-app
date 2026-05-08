@@ -21,7 +21,7 @@ export async function analyzeInvoiceImage(
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
     const today = new Date().toISOString().slice(0, 10)
     const prompt = `Eres un asistente que extrae datos de facturas y tickets de compra.
