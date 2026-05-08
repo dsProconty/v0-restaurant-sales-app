@@ -61,15 +61,17 @@ export async function POST(req: NextRequest) {
     await sendReply(from, "📷 Imagen recibida, analizando factura...")
 
     // Analyze with Gemini Vision
-    const extracted = await analyzeInvoiceImage(imageBase64, mediaContentType)
+    const result = await analyzeInvoiceImage(imageBase64, mediaContentType)
 
-    if (!extracted) {
+    if (!result.ok) {
       await sendReply(
         from,
-        "No pude leer la factura correctamente. Asegúrate de que la imagen sea clara y bien iluminada, luego intenta de nuevo."
+        `❌ No pude procesar la factura.\n\nDetalle: ${result.error}\n\nReintenta con una foto más clara.`
       )
       return new NextResponse("OK", { status: 200 })
     }
+
+    const extracted = result.data
 
     // Create expense in Supabase
     const supabase = await createClient()

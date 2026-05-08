@@ -1,7 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-
 export interface ExtractedInvoice {
   date: string
   supplier: string | null
@@ -9,11 +7,20 @@ export interface ExtractedInvoice {
   description: string | null
 }
 
+export type AnalyzeResult =
+  | { ok: true; data: ExtractedInvoice }
+  | { ok: false; error: string }
+
 export async function analyzeInvoiceImage(
   base64Image: string,
   mimeType: string
-): Promise<ExtractedInvoice | null> {
+): Promise<AnalyzeResult> {
+  if (!process.env.GEMINI_API_KEY) {
+    return { ok: false, error: "GEMINI_API_KEY no está configurada en el servidor" }
+  }
+
   try {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 
     const today = new Date().toISOString().slice(0, 10)
@@ -42,41 +49,40 @@ Formato exacto de respuesta:
     const text = result.response.text().trim()
     console.log("[Gemini] Raw response:", text)
 
-    // Strip markdown code blocks if present
     const cleaned = text
       .replace(/^```json\s*/i, "")
       .replace(/^```\s*/i, "")
       .replace(/\s*```$/i, "")
       .trim()
 
-    // Extract JSON object even if there's surrounding text
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
-      console.error("[Gemini] No JSON found in response:", cleaned)
-      return null
+      return { ok: false, error: `Gemini no devolvió JSON. Respuesta: ${text.slice(0, 150)}` }
     }
 
-    const parsed = JSON.parse(jsonMatch[0]) as ExtractedInvoice
+    let parsed: ExtractedInvoice
+    try {
+      parsed = JSON.parse(jsonMatch[0]) as ExtractedInvoice
+    } catch (e) {
+      return { ok: false, error: `JSON inválido de Gemini: ${jsonMatch[0].slice(0, 150)}` }
+    }
 
-    // Coerce amount to number if Gemini returned it as string
     if (typeof parsed.amount === "string") {
       parsed.amount = parseFloat((parsed.amount as string).replace(/[^0-9.]/g, ""))
     }
 
     if (typeof parsed.amount !== "number" || isNaN(parsed.amount) || parsed.amount <= 0) {
-      console.error("[Gemini] Invalid amount:", parsed.amount)
-      return null
+      return { ok: false, error: `Monto inválido extraído: ${parsed.amount}` }
     }
 
-    // Ensure date is valid, fallback to today
     if (!parsed.date || !/^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
       parsed.date = today
     }
 
-    return parsed
+    return { ok: true, data: parsed }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error("[Gemini] Error analyzing invoice:", msg)
-    return null
+    return { ok: false, error: `Error llamando a Gemini: ${msg.slice(0, 200)}` }
   }
 }
