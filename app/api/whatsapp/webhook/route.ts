@@ -49,7 +49,9 @@ export async function POST(req: NextRequest) {
   if (numMedia === 0) {
     await sendReply(
       from,
-      "Hola! 👋 Para registrar un gasto, envíame una foto de la factura o ticket y lo registro automáticamente en el sistema."
+      "👋 ¡Hola! Soy tu asistente de gastos.\n\n" +
+        "Envíame una foto de tu factura o ticket y la registro al instante en tu sistema. ✨\n\n" +
+        "_Tip: asegúrate que la foto sea clara y se vean los totales._"
     )
     return new NextResponse("OK", { status: 200 })
   }
@@ -58,7 +60,10 @@ export async function POST(req: NextRequest) {
   const mediaContentType: string = body.MediaContentType0 ?? ""
 
   if (!mediaContentType.startsWith("image/")) {
-    await sendReply(from, "Solo puedo procesar imágenes. Por favor envía una foto de la factura.")
+    await sendReply(
+      from,
+      "📎 Por ahora solo proceso imágenes.\n\nEnvíame una foto de la factura y la registro de inmediato. 📸"
+    )
     return new NextResponse("OK", { status: 200 })
   }
 
@@ -70,14 +75,17 @@ export async function POST(req: NextRequest) {
     })
 
     if (!imageResponse.ok) {
-      await sendReply(from, "No pude descargar la imagen. Intenta enviarla de nuevo.")
+      await sendReply(
+        from,
+        "🤔 No pude abrir tu imagen. ¿Me la envías otra vez?"
+      )
       return new NextResponse("OK", { status: 200 })
     }
 
     const imageBuffer = await imageResponse.arrayBuffer()
     const imageBase64 = Buffer.from(imageBuffer).toString("base64")
 
-    await sendReply(from, "📷 Imagen recibida, analizando factura...")
+    await sendReply(from, "🔍 Recibí tu factura, déjame analizarla un momento...")
 
     const supabase = await createClient()
 
@@ -97,7 +105,12 @@ export async function POST(req: NextRequest) {
     if (!result.ok) {
       await sendReply(
         from,
-        `❌ No pude procesar la factura.\n\nDetalle: ${result.error}\n\nReintenta con una foto más clara.`
+        "😕 No logré leer bien la factura.\n\n" +
+          "Por favor inténtalo de nuevo asegurándote de que:\n" +
+          "• La imagen esté bien iluminada\n" +
+          "• Se vean claramente la fecha, el total y el proveedor\n" +
+          "• La foto no esté borrosa\n\n" +
+          `_Detalle técnico: ${result.error}_`
       )
       return new NextResponse("OK", { status: 200 })
     }
@@ -136,7 +149,10 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("[WhatsApp] Supabase insert error:", error)
-      await sendReply(from, "La factura fue leída pero hubo un error al guardarla. Por favor intenta de nuevo.")
+      await sendReply(
+        from,
+        "⚠️ Leí la factura pero tuve un problema al guardarla.\n\n¿Puedes intentarlo en un momento? 🙏"
+      )
       return new NextResponse("OK", { status: 200 })
     }
 
@@ -149,32 +165,38 @@ export async function POST(req: NextRequest) {
     })
 
     const supplierLine = matchedSupplier
-      ? `🏪 Proveedor: ${matchedSupplier.name} (existente)`
+      ? `🏪 *Proveedor:* ${matchedSupplier.name}`
       : finalSupplierName
-        ? `🏪 Proveedor: ${finalSupplierName} (nuevo, agregado al catálogo)`
-        : "🏪 Proveedor: No identificado"
+        ? `🏪 *Proveedor:* ${finalSupplierName}  _✨ nuevo_`
+        : `🏪 *Proveedor:* _no identificado_`
 
     const categoryLine = matchedCategory
-      ? `🏷️ Categoría: ${matchedCategory.name}`
-      : extracted.category
-        ? `🏷️ Categoría: ${extracted.category} (sin asignar — no coincide con ninguna existente)`
-        : "🏷️ Categoría: No identificada"
+      ? `🏷️ *Categoría:* ${matchedCategory.name}`
+      : `🏷️ *Categoría:* _pendiente de asignar_`
+
+    const formattedAmount = `$${Number(extracted.amount).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
 
     await sendReply(
       from,
-      `✅ *Gasto registrado exitosamente*\n\n` +
-        `📅 Fecha: ${dateFormatted}\n` +
+      `✅ *¡Gasto registrado!*\n` +
+        `━━━━━━━━━━━━━━\n` +
+        `💰 *Total:* ${formattedAmount}\n` +
+        `📅 *Fecha:* ${dateFormatted}\n` +
         `${supplierLine}\n` +
         `${categoryLine}\n` +
-        `💰 Monto: $${Number(extracted.amount).toLocaleString("es-MX", { minimumFractionDigits: 2 })}\n` +
-        (extracted.description ? `📝 ${extracted.description}\n` : "") +
-        `\nPuedes verlo en la sección de Gastos del sistema.`
+        (extracted.description ? `📝 *Detalle:* ${extracted.description}\n` : "") +
+        `━━━━━━━━━━━━━━\n` +
+        `\nYa puedes verlo en tu panel de Gastos. 📊\n` +
+        `\n_¿Tienes otra factura? Solo envíamela._ 📸`
     )
 
     return new NextResponse("OK", { status: 200 })
   } catch (err) {
     console.error("[WhatsApp] Unexpected error:", err)
-    await sendReply(from, "Ocurrió un error inesperado. Por favor intenta de nuevo en unos momentos.")
+    await sendReply(
+      from,
+      "🙈 Algo salió mal de mi lado.\n\nDame unos segundos e intenta de nuevo, por favor. 🙏"
+    )
     return new NextResponse("OK", { status: 200 })
   }
 }
