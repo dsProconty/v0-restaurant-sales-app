@@ -74,8 +74,9 @@ Formato exacto de respuesta:
     }
 
     return parsed
-  } catch (err) {
-    console.error("[Gemini] Error analyzing invoice:", err)
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error("[Gemini] Error analyzing invoice:", msg)
     return null
   }
 }

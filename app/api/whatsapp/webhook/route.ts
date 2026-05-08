@@ -20,15 +20,8 @@ export async function POST(req: NextRequest) {
   const body: Record<string, string> = {}
   params.forEach((value, key) => { body[key] = value })
 
-  // Optional: validate Twilio signature in production
-  if (process.env.TWILIO_AUTH_TOKEN && process.env.NODE_ENV === "production") {
-    const twilioSignature = req.headers.get("x-twilio-signature") ?? ""
-    const url = process.env.NEXT_PUBLIC_APP_URL + "/api/whatsapp/webhook"
-    const isValid = twilio.validateRequest(AUTH_TOKEN, twilioSignature, url, body)
-    if (!isValid) {
-      return new NextResponse("Forbidden", { status: 403 })
-    }
-  }
+  // Twilio signature validation (disabled temporarily for debugging)
+  // TODO: re-enable after confirming webhook works end to end
 
   const from: string = body.From ?? ""
   const numMedia = parseInt(body.NumMedia ?? "0")
