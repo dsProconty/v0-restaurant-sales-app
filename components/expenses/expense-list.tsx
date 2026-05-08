@@ -42,6 +42,7 @@ interface Expense {
   amount: number
   notes: string | null
   category_id: string | null
+  source: string | null
   expense_categories: Category | null
 }
 
@@ -170,6 +171,11 @@ export function ExpenseList({ expenses, categories, suppliers }: ExpenseListProp
                       style={{ borderColor: expense.expense_categories.color, color: expense.expense_categories.color }}
                     >
                       {expense.expense_categories.name}
+                    </Badge>
+                  )}
+                  {expense.source === "whatsapp" && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 border-green-200">
+                      📱 WhatsApp
                     </Badge>
                   )}
                   {expense.supplier && (

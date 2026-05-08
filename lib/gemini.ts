@@ -5,15 +5,22 @@ export interface ExtractedInvoice {
   supplier: string | null
   amount: number
   description: string | null
+  category: string | null
 }
 
 export type AnalyzeResult =
   | { ok: true; data: ExtractedInvoice }
   | { ok: false; error: string }
 
+interface AnalyzeOptions {
+  categories?: string[]
+  suppliers?: string[]
+}
+
 export async function analyzeInvoiceImage(
   base64Image: string,
-  mimeType: string
+  mimeType: string,
+  options: AnalyzeOptions = {}
 ): Promise<AnalyzeResult> {
   if (!process.env.GEMINI_API_KEY) {
     return { ok: false, error: "GEMINI_API_KEY no está configurada en el servidor" }
@@ -24,6 +31,17 @@ export async function analyzeInvoiceImage(
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
     const today = new Date().toISOString().slice(0, 10)
+    const categoriesList = (options.categories ?? []).filter(Boolean)
+    const suppliersList = (options.suppliers ?? []).filter(Boolean)
+
+    const categoriesBlock = categoriesList.length
+      ? `\nCATEGORÍAS DISPONIBLES (elige la más adecuada de esta lista, o null si ninguna aplica):\n${categoriesList.map((c) => `- ${c}`).join("\n")}`
+      : ""
+
+    const suppliersBlock = suppliersList.length
+      ? `\nPROVEEDORES YA REGISTRADOS (si el negocio de la factura coincide con alguno, devuelve EXACTAMENTE el mismo nombre de la lista. Si no coincide ninguno, devuelve el nombre tal cual aparece en la factura):\n${suppliersList.map((s) => `- ${s}`).join("\n")}`
+      : ""
+
     const prompt = `Eres un asistente que extrae datos de facturas y tickets de compra.
 
 Analiza la imagen y extrae estos campos en JSON:
@@ -31,6 +49,9 @@ Analiza la imagen y extrae estos campos en JSON:
 - supplier: nombre del negocio o proveedor que emite la factura (string, o null)
 - amount: el monto TOTAL final a pagar, incluyendo impuestos. Solo el número, sin símbolos. Ej: 25.38
 - description: lista breve de productos comprados (string, o null)
+- category: categoría a la que pertenece este gasto (string, o null)
+${categoriesBlock}
+${suppliersBlock}
 
 IMPORTANTE:
 - Responde SOLO con el JSON, sin texto adicional ni markdown
@@ -39,7 +60,7 @@ IMPORTANTE:
 - Si la imagen es difícil de leer, intenta igual con lo que puedas ver
 
 Formato exacto de respuesta:
-{"date":"${today}","supplier":"Nombre del lugar","amount":99.99,"description":"Descripción"}`
+{"date":"${today}","supplier":"Nombre del lugar","amount":99.99,"description":"Descripción","category":"Nombre de categoría"}`
 
     const result = await model.generateContent([
       prompt,

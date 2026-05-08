@@ -13,15 +13,35 @@ async function sendReply(to: string, message: string) {
   await client.messages.create({ from: FROM_NUMBER, to, body: message })
 }
 
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9 ]/g, "")
+    .trim()
+}
+
+function findBestMatch<T extends { id: string; name: string }>(
+  needle: string | null | undefined,
+  haystack: T[]
+): T | null {
+  if (!needle) return null
+  const n = normalize(needle)
+  if (!n) return null
+  const exact = haystack.find((h) => normalize(h.name) === n)
+  if (exact) return exact
+  const partial = haystack.find(
+    (h) => normalize(h.name).includes(n) || n.includes(normalize(h.name))
+  )
+  return partial ?? null
+}
+
 export async function POST(req: NextRequest) {
-  // Twilio sends application/x-www-form-urlencoded
   const text = await req.text()
   const params = new URLSearchParams(text)
   const body: Record<string, string> = {}
   params.forEach((value, key) => { body[key] = value })
-
-  // Twilio signature validation (disabled temporarily for debugging)
-  // TODO: re-enable after confirming webhook works end to end
 
   const from: string = body.From ?? ""
   const numMedia = parseInt(body.NumMedia ?? "0")
@@ -43,7 +63,6 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Download image from Twilio (requires basic auth)
     const imageResponse = await fetch(mediaUrl, {
       headers: {
         Authorization: `Basic ${Buffer.from(`${ACCOUNT_SID}:${AUTH_TOKEN}`).toString("base64")}`,
@@ -60,8 +79,20 @@ export async function POST(req: NextRequest) {
 
     await sendReply(from, "📷 Imagen recibida, analizando factura...")
 
-    // Analyze with Gemini Vision
-    const result = await analyzeInvoiceImage(imageBase64, mediaContentType)
+    const supabase = await createClient()
+
+    // Fetch existing categories and suppliers to feed into Gemini
+    const [{ data: categoriesData }, { data: suppliersData }] = await Promise.all([
+      supabase.from("expense_categories").select("id, name"),
+      supabase.from("suppliers").select("id, name").eq("is_active", true),
+    ])
+    const categories = categoriesData ?? []
+    const suppliers = suppliersData ?? []
+
+    const result = await analyzeInvoiceImage(imageBase64, mediaContentType, {
+      categories: categories.map((c) => c.name),
+      suppliers: suppliers.map((s) => s.name),
+    })
 
     if (!result.ok) {
       await sendReply(
@@ -73,14 +104,34 @@ export async function POST(req: NextRequest) {
 
     const extracted = result.data
 
-    // Create expense in Supabase
-    const supabase = await createClient()
+    // Match supplier and category to existing IDs (fuzzy match by name)
+    const matchedSupplier = findBestMatch(extracted.supplier, suppliers)
+    const matchedCategory = findBestMatch(extracted.category, categories)
+
+    // If supplier doesn't exist, create it automatically
+    let finalSupplierName = extracted.supplier ?? null
+    if (extracted.supplier && !matchedSupplier) {
+      const { data: created, error: createErr } = await supabase
+        .from("suppliers")
+        .insert({ name: extracted.supplier.trim() })
+        .select("id, name")
+        .single()
+      if (!createErr && created) {
+        finalSupplierName = created.name
+        console.log("[WhatsApp] Auto-created supplier:", created.name)
+      }
+    } else if (matchedSupplier) {
+      finalSupplierName = matchedSupplier.name
+    }
+
     const { error } = await supabase.from("expenses").insert({
       date: extracted.date,
-      supplier: extracted.supplier ?? null,
+      category_id: matchedCategory?.id ?? null,
+      supplier: finalSupplierName,
       description: extracted.description ?? null,
       amount: extracted.amount,
       notes: `Registrado vía WhatsApp (${from})`,
+      source: "whatsapp",
     })
 
     if (error) {
@@ -97,11 +148,24 @@ export async function POST(req: NextRequest) {
       year: "numeric",
     })
 
+    const supplierLine = matchedSupplier
+      ? `🏪 Proveedor: ${matchedSupplier.name} (existente)`
+      : finalSupplierName
+        ? `🏪 Proveedor: ${finalSupplierName} (nuevo, agregado al catálogo)`
+        : "🏪 Proveedor: No identificado"
+
+    const categoryLine = matchedCategory
+      ? `🏷️ Categoría: ${matchedCategory.name}`
+      : extracted.category
+        ? `🏷️ Categoría: ${extracted.category} (sin asignar — no coincide con ninguna existente)`
+        : "🏷️ Categoría: No identificada"
+
     await sendReply(
       from,
       `✅ *Gasto registrado exitosamente*\n\n` +
         `📅 Fecha: ${dateFormatted}\n` +
-        `🏪 Proveedor: ${extracted.supplier ?? "No identificado"}\n` +
+        `${supplierLine}\n` +
+        `${categoryLine}\n` +
         `💰 Monto: $${Number(extracted.amount).toLocaleString("es-MX", { minimumFractionDigits: 2 })}\n` +
         (extracted.description ? `📝 ${extracted.description}\n` : "") +
         `\nPuedes verlo en la sección de Gastos del sistema.`
