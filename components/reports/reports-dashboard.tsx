@@ -333,8 +333,8 @@ export function ReportsDashboard({ data }: Props) {
           projectedMonthTotal={data.projectedMonthTotal}
           prevMonthTotal={data.prevMonthTotal}
           monthProgressPct={data.monthProgressPct}
-          dayOfMonth={data.dayOfMonth}
-          daysInMonth={data.daysInMonth}
+          workingDaysElapsed={data.workingDaysElapsed}
+          workingDaysInMonth={data.workingDaysInMonth}
           bestDay={data.bestDay}
           worstDay={data.worstDay}
           daysRecorded={data.daysRecorded}

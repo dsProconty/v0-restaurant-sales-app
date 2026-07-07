@@ -17,8 +17,8 @@ interface Props {
   projectedMonthTotal: number
   prevMonthTotal: number
   monthProgressPct: number
-  dayOfMonth: number
-  daysInMonth: number
+  workingDaysElapsed: number
+  workingDaysInMonth: number
   bestDay: { date: string; amount: number } | null
   worstDay: { date: string; amount: number } | null
   daysRecorded: number
@@ -34,8 +34,8 @@ export function ProjectionInsight({
   projectedMonthTotal,
   prevMonthTotal,
   monthProgressPct,
-  dayOfMonth,
-  daysInMonth,
+  workingDaysElapsed,
+  workingDaysInMonth,
   bestDay,
   worstDay,
   daysRecorded,
@@ -60,7 +60,7 @@ export function ProjectionInsight({
           <CardTitle className="text-base">Proyección de cierre de mes</CardTitle>
         </div>
         <CardDescription>
-          Basada en promedio diario actual · {dayOfMonth} de {daysInMonth} días
+          Basada en promedio diario actual · {workingDaysElapsed} de {workingDaysInMonth} días hábiles (sin domingos)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -109,8 +109,8 @@ export function ProjectionInsight({
             {/* Stats */}
             <div className="divide-y divide-border rounded-lg border border-border overflow-hidden">
               <div className="flex justify-between px-3 py-2 text-sm">
-                <span className="text-muted-foreground">Días transcurridos</span>
-                <span className="font-medium">{dayOfMonth} / {daysInMonth}</span>
+                <span className="text-muted-foreground">Días hábiles transcurridos</span>
+                <span className="font-medium">{workingDaysElapsed} / {workingDaysInMonth}</span>
               </div>
               <div className="flex justify-between px-3 py-2 text-sm">
                 <span className="text-muted-foreground">Días con ventas</span>

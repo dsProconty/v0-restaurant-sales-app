@@ -56,10 +56,21 @@ export interface ReportData {
   topProducts: ProductStat[]
   projectedMonthTotal: number
   monthProgressPct: number
-  daysInMonth: number
-  dayOfMonth: number
+  workingDaysInMonth: number
+  workingDaysElapsed: number
   bestDay: { date: string; amount: number } | null
   worstDay: { date: string; amount: number } | null
+}
+
+// ─── Días hábiles: el local no abre los domingos ────────────────────────────
+function countWorkingDays(start: Date, end: Date): number {
+  let count = 0
+  const cursor = new Date(start)
+  while (cursor <= end) {
+    if (cursor.getDay() !== 0) count++   // 0 = domingo
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return count
 }
 
 // ─── Data fetching ──────────────────────────────────────────────────────────
@@ -206,15 +217,17 @@ async function getReportData(): Promise<ReportData> {
   const bestDay = daily.length > 0 ? daily.reduce((b, d) => d.amount > b.amount ? d : b) : null
   const worstDay = daily.length > 0 ? daily.reduce((w, d) => d.amount < w.amount ? d : w) : null
 
-  // ── Proyección ───────────────────────────────────────────────────────────
-  const dayOfMonth = today.getDate()
-  const daysInMonth = endOfMonth(today).getDate()
-  const projectedMonthTotal = daysRecorded > 0
-    ? (currentMonthTotal / dayOfMonth) * daysInMonth
+  // ── Proyección (en base a días hábiles — el local no abre los domingos) ──
+  const workingDaysElapsed = countWorkingDays(currentMonthStart, today)
+  const workingDaysInMonth = countWorkingDays(currentMonthStart, currentMonthEnd)
+  const projectedMonthTotal = daysRecorded > 0 && workingDaysElapsed > 0
+    ? (currentMonthTotal / workingDaysElapsed) * workingDaysInMonth
     : 0
-  const monthProgressPct = Math.round((dayOfMonth / daysInMonth) * 100)
+  const monthProgressPct = workingDaysInMonth > 0
+    ? Math.round((workingDaysElapsed / workingDaysInMonth) * 100)
+    : 0
 
-  log("Proyección", { projectedMonthTotal: projectedMonthTotal.toFixed(2), monthProgressPct })
+  log("Proyección", { projectedMonthTotal: projectedMonthTotal.toFixed(2), monthProgressPct, workingDaysElapsed, workingDaysInMonth })
   log("Fetch completo ✓")
 
   return {
@@ -226,7 +239,7 @@ async function getReportData(): Promise<ReportData> {
     weekOverWeekChange: pct(currentWeekTotal, prevWeekTotal),
     monthOverMonthChange: pct(currentMonthTotal, prevMonthTotal),
     last7Days, categoryStats, topProducts,
-    projectedMonthTotal, monthProgressPct, daysInMonth, dayOfMonth,
+    projectedMonthTotal, monthProgressPct, workingDaysInMonth, workingDaysElapsed,
     bestDay, worstDay,
   }
 }
@@ -249,7 +262,8 @@ export default async function ReportsPage() {
       dayOverDayChange: 0, weekOverWeekChange: 0, monthOverMonthChange: 0,
       last7Days: [], categoryStats: [], topProducts: [],
       projectedMonthTotal: 0, monthProgressPct: 0,
-      daysInMonth: endOfMonth(today).getDate(), dayOfMonth: today.getDate(),
+      workingDaysInMonth: countWorkingDays(startOfMonth(today), endOfMonth(today)),
+      workingDaysElapsed: countWorkingDays(startOfMonth(today), today),
       bestDay: null, worstDay: null,
     }
   }
