@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   Cell,
+  LabelList,
   ResponsiveContainer,
 } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +16,11 @@ import type { MonthlyTrendPoint } from "@/lib/kpi-gerencial"
 
 const COLOR_MUTED = "#B8B2A6"
 const COLOR_CURR = "#E85D04"
+
+function compactMoney(n: number) {
+  if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`
+  return `$${Math.round(n).toLocaleString("es-EC")}`
+}
 
 function CustomTooltip({ active, payload, label }: {
   active?: boolean
@@ -44,45 +50,60 @@ function EmptyState() {
 interface Props {
   data: MonthlyTrendPoint[]
   highlightMonth: string
+  isFullHistory?: boolean
 }
 
-export function MonthlyTrendChart({ data, highlightMonth }: Props) {
+export function MonthlyTrendChart({ data, highlightMonth, isFullHistory }: Props) {
   const hasData = data.some((d) => d.total > 0)
+  const chartWidth = Math.max(480, data.length * 90)
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Evolución mensual de ingresos</CardTitle>
-        <CardDescription>Últimos {data.length || 6} meses</CardDescription>
+        <CardDescription>
+          {isFullHistory ? `Todo el historial — ${data.length} meses` : `Últimos ${data.length || 6} meses`}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {!hasData ? (
           <EmptyState />
         ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v) => `$${v}`}
-                width={60}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="total" radius={[4, 4, 0, 0]}>
-                {data.map((d) => (
-                  <Cell key={d.month} fill={d.month === highlightMonth ? COLOR_CURR : COLOR_MUTED} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="overflow-x-auto">
+            <div style={{ width: chartWidth }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={data} margin={{ top: 26, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={[0, (max: number) => Math.ceil(max * 1.25)]}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => `$${v}`}
+                    width={60}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="total" radius={[4, 4, 0, 0]} maxBarSize={36}>
+                    {data.map((d) => (
+                      <Cell key={d.month} fill={d.month === highlightMonth ? COLOR_CURR : COLOR_MUTED} />
+                    ))}
+                    <LabelList
+                      dataKey="total"
+                      position="top"
+                      formatter={(v: number) => (v > 0 ? compactMoney(v) : "")}
+                      style={{ fontSize: 10, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>

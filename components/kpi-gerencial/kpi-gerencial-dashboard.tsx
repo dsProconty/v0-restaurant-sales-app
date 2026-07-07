@@ -212,9 +212,9 @@ export function KpiGerencialDashboard({ initialData }: Props) {
         />
       </div>
 
-      {/* ── Gráficos comparativos ── */}
+      {/* ── Gráficos comparativos — ancho completo para que quepan todas las categorías ── */}
       <div className={[
-        "grid grid-cols-1 lg:grid-cols-2 gap-4 transition-opacity duration-200",
+        "grid grid-cols-1 gap-4 transition-opacity duration-200",
         loading ? "opacity-60" : "opacity-100",
       ].join(" ")}>
         <CategoryComparisonChart
@@ -238,7 +238,7 @@ export function KpiGerencialDashboard({ initialData }: Props) {
       </div>
 
       {/* ── Evolución mensual ── */}
-      <MonthlyTrendChart data={trend} highlightMonth={b.month} />
+      <MonthlyTrendChart data={trend} highlightMonth={b.month} isFullHistory={preset === "historial"} />
 
       {/* ── Detalle por producto ── */}
       <ProductComparisonTable

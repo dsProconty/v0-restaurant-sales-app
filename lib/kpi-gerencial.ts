@@ -95,7 +95,7 @@ async function getMonthSummary(supabase: SupabaseClient, monthStr: string): Prom
 
   for (const item of itemsRes.data ?? []) {
     const p = item.products as { name?: string; category?: string | null } | null
-    const cat = p?.category ?? "Sin categoría"
+    const cat = p?.category?.trim() || "Sin categoría"
     const name = p?.name ?? "Desconocido"
     const qty = item.quantity ?? 0
     const rev = item.subtotal ?? 0
