@@ -91,6 +91,9 @@ export function CategoryComparisonChart({
 }: Props) {
   const data = mergeCategoryStats(prevStats, currStats, metric)
   const hasData = data.some((d) => d.prev > 0 || d.curr > 0)
+  const naturalWidth = data.length * 90
+  const chartWidth = Math.max(480, naturalWidth) + 160
+  const mayNeedScroll = naturalWidth > 560
 
   const valueFmt = (n: number) =>
     metric === "revenue"
@@ -118,43 +121,53 @@ export function CategoryComparisonChart({
                 {currLabel}
               </span>
             </div>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={data} margin={{ top: 22, right: 8, left: 0, bottom: 0 }} barGap={4} barCategoryGap="18%">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis
-                  dataKey="category"
-                  interval={0}
-                  tick={{ fontSize: 10.5, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={[0, (max: number) => Math.ceil(max * 1.3)]}
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => (metric === "revenue" ? `$${v}` : `${v}`)}
-                  width={50}
-                />
-                <Tooltip content={<CustomTooltip valueFmt={valueFmt} />} />
-                <Bar dataKey="prev" name={prevLabel} fill={COLOR_PREV} radius={[3, 3, 0, 0]} maxBarSize={20}>
-                  <LabelList
-                    dataKey="prev"
-                    position="top"
-                    formatter={(v: number) => (v > 0 ? compactLabel(v, metric) : "")}
-                    style={{ fontSize: 9, fontWeight: 600, fill: "hsl(var(--foreground))" }}
-                  />
-                </Bar>
-                <Bar dataKey="curr" name={currLabel} fill={COLOR_CURR} radius={[3, 3, 0, 0]} maxBarSize={20}>
-                  <LabelList
-                    dataKey="curr"
-                    position="top"
-                    formatter={(v: number) => (v > 0 ? compactLabel(v, metric) : "")}
-                    style={{ fontSize: 9, fontWeight: 600, fill: "hsl(var(--foreground))" }}
-                  />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="chart-scroll">
+              <div style={{ width: chartWidth }}>
+                <ResponsiveContainer width="100%" height={290}>
+                  <BarChart data={data} margin={{ top: 22, right: 50, left: 0, bottom: 0 }} barGap={4} barCategoryGap="18%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis
+                      dataKey="category"
+                      interval={0}
+                      angle={-30}
+                      textAnchor="end"
+                      height={54}
+                      tick={{ fontSize: 10.5, fill: "hsl(var(--muted-foreground))" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={[0, (max: number) => Math.ceil(max * 1.3)]}
+                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => (metric === "revenue" ? `$${v}` : `${v}`)}
+                      width={50}
+                    />
+                    <Tooltip content={<CustomTooltip valueFmt={valueFmt} />} />
+                    <Bar dataKey="prev" name={prevLabel} fill={COLOR_PREV} radius={[3, 3, 0, 0]} maxBarSize={20}>
+                      <LabelList
+                        dataKey="prev"
+                        position="top"
+                        formatter={(v: number) => (v > 0 ? compactLabel(v, metric) : "")}
+                        style={{ fontSize: 9, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+                      />
+                    </Bar>
+                    <Bar dataKey="curr" name={currLabel} fill={COLOR_CURR} radius={[3, 3, 0, 0]} maxBarSize={20}>
+                      <LabelList
+                        dataKey="curr"
+                        position="top"
+                        formatter={(v: number) => (v > 0 ? compactLabel(v, metric) : "")}
+                        style={{ fontSize: 9, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            {mayNeedScroll && (
+              <p className="text-[11px] text-muted-foreground mt-1 text-right">← desliza para ver más →</p>
+            )}
           </>
         )}
       </CardContent>

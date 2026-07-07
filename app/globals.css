@@ -123,3 +123,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Barra de navegación horizontal visible para gráficos con muchas columnas */
+.chart-scroll {
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scrollbar-width: auto;
+}
+.chart-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+.chart-scroll::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 999px;
+}
+.chart-scroll::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  opacity: 0.6;
+  border-radius: 999px;
+}
+.chart-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}

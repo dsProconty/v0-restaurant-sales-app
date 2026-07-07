@@ -85,6 +85,10 @@ interface Props {
 export function CategoryMultiMonthChart({ title, description, months, metric }: Props) {
   const data = mergeMonthlyCategoryStats(months, metric)
   const hasData = data.some((row) => months.some((m) => ((row[m.month] as number) ?? 0) > 0))
+  const perCategoryWidth = Math.max(70, months.length * 22 + 24)
+  const naturalWidth = data.length * perCategoryWidth
+  const chartWidth = Math.max(560, naturalWidth) + 160
+  const mayNeedScroll = naturalWidth > 600
 
   const valueFmt = (n: number) =>
     metric === "revenue"
@@ -113,44 +117,54 @@ export function CategoryMultiMonthChart({ title, description, months, metric }: 
                 </span>
               ))}
             </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={data} margin={{ top: 22, right: 8, left: 0, bottom: 0 }} barGap={3} barCategoryGap="16%">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis
-                  dataKey="category"
-                  interval={0}
-                  tick={{ fontSize: 10.5, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={[0, (max: number) => Math.ceil(max * 1.3)]}
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => (metric === "revenue" ? `$${v}` : `${v}`)}
-                  width={50}
-                />
-                <Tooltip content={<CustomTooltip months={months} valueFmt={valueFmt} />} />
-                {months.map((m, i) => (
-                  <Bar
-                    key={m.month}
-                    dataKey={m.month}
-                    name={m.label}
-                    fill={MONTH_COLORS[i % MONTH_COLORS.length]}
-                    radius={[3, 3, 0, 0]}
-                    maxBarSize={16}
-                  >
-                    <LabelList
-                      dataKey={m.month}
-                      position="top"
-                      formatter={(v: number) => (v > 0 ? compactLabel(v, metric) : "")}
-                      style={{ fontSize: 8.5, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+            <div className="chart-scroll">
+              <div style={{ width: chartWidth }}>
+                <ResponsiveContainer width="100%" height={310}>
+                  <BarChart data={data} margin={{ top: 22, right: 70, left: 0, bottom: 0 }} barGap={3} barCategoryGap="16%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis
+                      dataKey="category"
+                      interval={0}
+                      angle={-30}
+                      textAnchor="end"
+                      height={54}
+                      tick={{ fontSize: 10.5, fill: "hsl(var(--muted-foreground))" }}
+                      axisLine={false}
+                      tickLine={false}
                     />
-                  </Bar>
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+                    <YAxis
+                      domain={[0, (max: number) => Math.ceil(max * 1.3)]}
+                      tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => (metric === "revenue" ? `$${v}` : `${v}`)}
+                      width={50}
+                    />
+                    <Tooltip content={<CustomTooltip months={months} valueFmt={valueFmt} />} />
+                    {months.map((m, i) => (
+                      <Bar
+                        key={m.month}
+                        dataKey={m.month}
+                        name={m.label}
+                        fill={MONTH_COLORS[i % MONTH_COLORS.length]}
+                        radius={[3, 3, 0, 0]}
+                        maxBarSize={16}
+                      >
+                        <LabelList
+                          dataKey={m.month}
+                          position="top"
+                          formatter={(v: number) => (v > 0 ? compactLabel(v, metric) : "")}
+                          style={{ fontSize: 8.5, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+                        />
+                      </Bar>
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            {mayNeedScroll && (
+              <p className="text-[11px] text-muted-foreground mt-1 text-right">← desliza para ver más →</p>
+            )}
           </>
         )}
       </CardContent>
