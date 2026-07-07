@@ -7,6 +7,21 @@ import {
   subMonths, subDays,
   eachDayOfInterval,
 } from "date-fns"
+
+// ─── Días hábiles: el local no abre los domingos ────────────────────────────
+function isWorkingDay(d: Date) {
+  return d.getDay() !== 0   // 0 = domingo
+}
+
+function lastNWorkingDays(end: Date, n: number): Date[] {
+  const days: Date[] = []
+  const cursor = new Date(end)
+  while (days.length < n) {
+    if (isWorkingDay(cursor)) days.push(new Date(cursor))
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return days.reverse()
+}
 import { es } from "date-fns/locale"
 import type { DailyPoint, CategoryStat, ProductStat } from "@/app/reports/page"
 
@@ -134,23 +149,26 @@ export async function GET(req: NextRequest) {
     const avgDaily = daysRecorded > 0 ? total / daysRecorded : 0
 
     // ── Tendencia (puntos del gráfico de líneas) ───────────────────────────
-    // Para "hoy" mostramos las últimas 7 días; para semana/mes el rango actual
+    // El local no abre los domingos, así que nunca aparecen en la tendencia.
+    // Para "hoy" mostramos los últimos 7 días hábiles; para semana/mes el rango actual.
+    let trendDays: Date[]
     let trendStart: Date
-    let trendEnd: Date
     if (range === "hoy") {
-      trendEnd = today
-      trendStart = subDays(today, 6)
+      trendDays = lastNWorkingDays(today, 7)
+      trendStart = trendDays[0]
     } else {
-      trendStart = new Date(dates.start + "T12:00:00")
-      trendEnd = new Date(dates.end + "T12:00:00")
-      if (trendEnd > today) trendEnd = today
+      const rangeStart = new Date(dates.start + "T12:00:00")
+      let rangeEnd = new Date(dates.end + "T12:00:00")
+      if (rangeEnd > today) rangeEnd = today
+      trendDays = eachDayOfInterval({ start: rangeStart, end: rangeEnd }).filter(isWorkingDay)
+      trendStart = rangeStart
     }
 
     const salesByDay: Record<string, number> = {}
     for (const row of currentRes.data ?? []) {
       salesByDay[row.sale_date] = (salesByDay[row.sale_date] ?? 0) + row.total_revenue
     }
-    // Para "hoy" necesitamos los últimos 7 días completos
+    // Para "hoy" necesitamos los últimos 7 días hábiles completos
     if (range === "hoy") {
       const last7Res = await supabase
         .from("daily_sales")
@@ -162,12 +180,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const trendPoints: DailyPoint[] = eachDayOfInterval({ start: trendStart, end: trendEnd })
-      .map(d => ({
-        date: format(d, "yyyy-MM-dd"),
-        label: format(d, "EEE d", { locale: es }),
-        amount: salesByDay[format(d, "yyyy-MM-dd")] ?? 0,
-      }))
+    const trendPoints: DailyPoint[] = trendDays.map(d => ({
+      date: format(d, "yyyy-MM-dd"),
+      label: format(d, "EEE d", { locale: es }),
+      amount: salesByDay[format(d, "yyyy-MM-dd")] ?? 0,
+    }))
 
     // ── Categorías y productos ─────────────────────────────────────────────
     const catMap: Record<string, { revenue: number; quantity: number }> = {}
