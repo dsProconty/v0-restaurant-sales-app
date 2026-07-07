@@ -8,11 +8,12 @@ const log = (msg: string, data?: unknown) =>
 const logError = (msg: string, err?: unknown) =>
   console.error(`${LOG} ❌ ${msg}`, err !== undefined ? err : "")
 
-// ─── GET /api/kpi-gerencial?monthA=yyyy-MM&monthB=yyyy-MM ───────────────────
+// ─── GET /api/kpi-gerencial?monthA=yyyy-MM&monthB=yyyy-MM&trendStart=yyyy-MM ─
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const monthA = searchParams.get("monthA")
   const monthB = searchParams.get("monthB")
+  const trendStartParam = searchParams.get("trendStart")
 
   if (!isValidMonth(monthA) || !isValidMonth(monthB)) {
     logError("Parámetros inválidos", { monthA, monthB })
@@ -22,10 +23,15 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  log("Request", { monthA, monthB })
+  if (trendStartParam !== null && !isValidMonth(trendStartParam)) {
+    logError("trendStart inválido", { trendStartParam })
+    return NextResponse.json({ error: "Parámetro trendStart inválido (formato esperado yyyy-MM)" }, { status: 400 })
+  }
+
+  log("Request", { monthA, monthB, trendStartParam })
 
   try {
-    const data = await getKpiGerencialData(monthA, monthB)
+    const data = await getKpiGerencialData(monthA, monthB, trendStartParam ?? undefined)
     return NextResponse.json(data)
   } catch (err) {
     logError("Unhandled error", err)

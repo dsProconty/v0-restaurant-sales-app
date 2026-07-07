@@ -17,7 +17,7 @@ const log = (msg: string, data?: unknown) =>
 const logError = (msg: string, err?: unknown) =>
   console.error(`${LOG} ❌ ${msg}`, err !== undefined ? err : "")
 
-type Preset = "anterior" | "anioPasado" | "personalizado"
+type Preset = "anterior" | "anioPasado" | "historial" | "personalizado"
 
 function fmtMoney(n: number) {
   return `$${n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -39,11 +39,12 @@ export function KpiGerencialDashboard({ initialData }: Props) {
   const [data, setData] = useState<KpiGerencialData>(initialData)
   const [loading, setLoading] = useState(false)
 
-  const fetchComparison = useCallback(async (a: string, b: string) => {
-    log("Fetch iniciado", { a, b })
+  const fetchComparison = useCallback(async (a: string, b: string, trendStart?: string) => {
+    log("Fetch iniciado", { a, b, trendStart })
     setLoading(true)
     try {
       const params = new URLSearchParams({ monthA: a, monthB: b })
+      if (trendStart) params.set("trendStart", trendStart)
       const res = await fetch(`/api/kpi-gerencial?${params}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json: KpiGerencialData = await res.json()
@@ -59,6 +60,18 @@ export function KpiGerencialDashboard({ initialData }: Props) {
   function applyPreset(p: Preset) {
     setPreset(p)
     if (p === "personalizado") return
+
+    if (p === "historial") {
+      const months = [...data.availableMonths].sort()
+      if (months.length === 0) return
+      const oldest = months[0]
+      const newest = months[months.length - 1]
+      setMonthA(oldest)
+      setMonthB(newest)
+      fetchComparison(oldest, newest, oldest)
+      return
+    }
+
     const bDate = new Date(`${monthB}-01T12:00:00`)
     const aDate = p === "anterior" ? subMonths(bDate, 1) : subMonths(bDate, 12)
     const a = format(aDate, "yyyy-MM")
@@ -74,7 +87,8 @@ export function KpiGerencialDashboard({ initialData }: Props) {
 
   function handleMonthBChange(value: string) {
     setMonthB(value)
-    if (preset === "personalizado") {
+    if (preset === "personalizado" || preset === "historial") {
+      setPreset("personalizado")
       fetchComparison(monthA, value)
       return
     }
@@ -85,7 +99,7 @@ export function KpiGerencialDashboard({ initialData }: Props) {
     fetchComparison(a, value)
   }
 
-  const { monthA: a, monthB: b, trend } = data
+  const { monthA: a, monthB: b, trend, availableMonths } = data
 
   const revenueChange = pctChange(a.total, b.total)
   const unitsChange = pctChange(a.unitsTotal, b.unitsTotal)
@@ -118,9 +132,9 @@ export function KpiGerencialDashboard({ initialData }: Props) {
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2 rounded-xl bg-muted/60 p-2">
             <span className="text-xs text-muted-foreground pl-1">Comparar</span>
-            <MonthSelect value={monthA} onChange={handleMonthAChange} disabled={loading} />
+            <MonthSelect value={monthA} months={availableMonths} onChange={handleMonthAChange} disabled={loading} />
             <span className="text-xs text-muted-foreground font-medium">vs</span>
-            <MonthSelect value={monthB} onChange={handleMonthBChange} disabled={loading} accent />
+            <MonthSelect value={monthB} months={availableMonths} onChange={handleMonthBChange} disabled={loading} accent />
           </div>
           {loading && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -134,6 +148,7 @@ export function KpiGerencialDashboard({ initialData }: Props) {
           {([
             { key: "anterior", label: "Mes anterior" },
             { key: "anioPasado", label: "Mismo mes, año pasado" },
+            { key: "historial", label: "Todo el historial" },
             { key: "personalizado", label: "Personalizado" },
           ] as { key: Preset; label: string }[]).map((p) => (
             <button
@@ -151,6 +166,11 @@ export function KpiGerencialDashboard({ initialData }: Props) {
             </button>
           ))}
         </div>
+        {preset === "historial" && availableMonths.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Comparando el primer mes con ventas registradas ({a.label}) contra el más reciente ({b.label}) — el gráfico de evolución muestra todos los meses de por medio.
+          </p>
+        )}
       </div>
 
       {/* ── KPIs comparativos ── */}

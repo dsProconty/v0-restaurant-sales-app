@@ -1,6 +1,6 @@
 import { format, subMonths } from "date-fns"
 import { KpiGerencialDashboard } from "@/components/kpi-gerencial/kpi-gerencial-dashboard"
-import { getKpiGerencialData, emptyMonthSummary, type KpiGerencialData } from "@/lib/kpi-gerencial"
+import { getKpiGerencialData, getDefaultMonths, emptyMonthSummary, type KpiGerencialData } from "@/lib/kpi-gerencial"
 
 // ─── Logger ─────────────────────────────────────────────────────────────────
 const LOG = "[kpi-gerencial/page]"
@@ -13,19 +13,23 @@ export default async function KpiGerencialPage() {
   log("Renderizando KpiGerencialPage")
 
   const today = new Date()
-  const monthBStr = format(today, "yyyy-MM")
-  const monthAStr = format(subMonths(today, 1), "yyyy-MM")
+  let monthAStr = format(subMonths(today, 1), "yyyy-MM")
+  let monthBStr = format(today, "yyyy-MM")
 
   let data: KpiGerencialData
 
   try {
+    const defaults = await getDefaultMonths()
+    monthAStr = defaults.monthA
+    monthBStr = defaults.monthB
     data = await getKpiGerencialData(monthAStr, monthBStr)
   } catch (err) {
-    logError("Error no controlado en getKpiGerencialData", err)
+    logError("Error no controlado obteniendo datos", err)
     data = {
       monthA: emptyMonthSummary(monthAStr),
       monthB: emptyMonthSummary(monthBStr),
       trend: [],
+      availableMonths: [],
     }
   }
 

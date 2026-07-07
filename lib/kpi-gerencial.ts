@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { format, startOfMonth, endOfMonth, subMonths, parse } from "date-fns"
+import { format, startOfMonth, endOfMonth, subMonths, addMonths, parse } from "date-fns"
 import { es } from "date-fns/locale"
 
 // ─── Logger ─────────────────────────────────────────────────────────────────
@@ -43,6 +43,7 @@ export interface KpiGerencialData {
   monthA: MonthSummary
   monthB: MonthSummary
   trend: MonthlyTrendPoint[]
+  availableMonths: string[]   // "yyyy-MM", ascending — meses con al menos una venta registrada
 }
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
@@ -130,11 +131,10 @@ async function getMonthSummary(supabase: SupabaseClient, monthStr: string): Prom
   }
 }
 
-// ─── Tendencia de últimos N meses ────────────────────────────────────────────
-async function getTrend(supabase: SupabaseClient, throughMonthStr: string, count = 6): Promise<MonthlyTrendPoint[]> {
-  const throughDate = parse(throughMonthStr, "yyyy-MM", new Date())
-  const startDate = startOfMonth(subMonths(throughDate, count - 1))
-  const endDate = endOfMonth(throughDate)
+// ─── Tendencia entre dos meses (inclusive) ──────────────────────────────────
+async function getTrend(supabase: SupabaseClient, startMonthStr: string, endMonthStr: string): Promise<MonthlyTrendPoint[]> {
+  const startDate = startOfMonth(parse(startMonthStr, "yyyy-MM", new Date()))
+  const endDate = endOfMonth(parse(endMonthStr, "yyyy-MM", new Date()))
 
   const res = await supabase
     .from("daily_sales")
@@ -151,31 +151,68 @@ async function getTrend(supabase: SupabaseClient, throughMonthStr: string, count
   }
 
   const points: MonthlyTrendPoint[] = []
-  for (let i = count - 1; i >= 0; i--) {
-    const d = subMonths(throughDate, i)
-    const monthKey = format(d, "yyyy-MM")
+  let cursor = startDate
+  while (cursor <= endDate) {
+    const monthKey = format(cursor, "yyyy-MM")
     points.push({
       month: monthKey,
-      label: format(d, "MMM", { locale: es }).replace(".", ""),
+      label: format(cursor, "MMM yy", { locale: es }).replace(".", ""),
       total: totalsByMonth[monthKey] ?? 0,
     })
+    cursor = startOfMonth(addMonths(cursor, 1))
   }
   return points
 }
 
+// ─── Meses con ventas registradas ────────────────────────────────────────────
+export async function getAvailableMonths(supabase: SupabaseClient): Promise<string[]> {
+  const res = await supabase.from("daily_sales").select("sale_date").order("sale_date", { ascending: true })
+
+  if (res.error) logError("availableMonths", res.error)
+
+  const set = new Set<string>()
+  for (const row of res.data ?? []) set.add(row.sale_date.slice(0, 7))
+  return Array.from(set).sort()
+}
+
+// ─── Meses por defecto: los dos más recientes con datos ─────────────────────
+export async function getDefaultMonths(): Promise<{ monthA: string; monthB: string }> {
+  const supabase = await createClient()
+  const months = await getAvailableMonths(supabase)
+  const today = new Date()
+
+  if (months.length === 0) {
+    return { monthA: format(subMonths(today, 1), "yyyy-MM"), monthB: format(today, "yyyy-MM") }
+  }
+
+  const monthB = months[months.length - 1]
+  const monthA = months.length > 1
+    ? months[months.length - 2]
+    : format(subMonths(parse(monthB, "yyyy-MM", today), 1), "yyyy-MM")
+
+  return { monthA, monthB }
+}
+
 // ─── Entry point ──────────────────────────────────────────────────────────────
-export async function getKpiGerencialData(monthAStr: string, monthBStr: string): Promise<KpiGerencialData> {
-  log("Fetch iniciado", { monthAStr, monthBStr })
+export async function getKpiGerencialData(
+  monthAStr: string,
+  monthBStr: string,
+  trendStartStr?: string,
+): Promise<KpiGerencialData> {
+  log("Fetch iniciado", { monthAStr, monthBStr, trendStartStr })
   const supabase = await createClient()
 
-  const [monthA, monthB, trend] = await Promise.all([
+  const [monthA, monthB, availableMonths] = await Promise.all([
     getMonthSummary(supabase, monthAStr),
     getMonthSummary(supabase, monthBStr),
-    getTrend(supabase, monthBStr, 6),
+    getAvailableMonths(supabase),
   ])
 
-  log("Fetch completo ✓", { totalA: monthA.total, totalB: monthB.total })
-  return { monthA, monthB, trend }
+  const trendStart = trendStartStr ?? format(subMonths(parse(monthBStr, "yyyy-MM", new Date()), 5), "yyyy-MM")
+  const trend = await getTrend(supabase, trendStart, monthBStr)
+
+  log("Fetch completo ✓", { totalA: monthA.total, totalB: monthB.total, meses: availableMonths.length })
+  return { monthA, monthB, trend, availableMonths }
 }
 
 export function emptyMonthSummary(monthStr: string): MonthSummary {

@@ -7,6 +7,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  LabelList,
   ResponsiveContainer,
 } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,7 +38,14 @@ function mergeCategoryStats(
   }
   return Object.values(map)
     .sort((a, b) => b.curr + b.prev - (a.curr + a.prev))
-    .slice(0, 8)
+    .slice(0, 6)
+}
+
+// ─── Etiqueta compacta que va directo sobre cada barra ──────────────────────
+function compactLabel(n: number, metric: "revenue" | "quantity") {
+  if (metric === "quantity") return n.toLocaleString("es-EC")
+  if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`
+  return `$${Math.round(n).toLocaleString("es-EC")}`
 }
 
 function CustomTooltip({ active, payload, label, valueFmt }: {
@@ -112,9 +120,9 @@ export function CategoryComparisonChart({
                 {currLabel}
               </span>
             </div>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={data} margin={{ top: 22, right: 8, left: 0, bottom: 0 }} barGap={20} barCategoryGap="18%">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis
                   dataKey="category"
                   tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
@@ -122,6 +130,7 @@ export function CategoryComparisonChart({
                   tickLine={false}
                 />
                 <YAxis
+                  domain={[0, (max: number) => Math.ceil(max * 1.3)]}
                   tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
@@ -129,8 +138,22 @@ export function CategoryComparisonChart({
                   width={50}
                 />
                 <Tooltip content={<CustomTooltip valueFmt={valueFmt} />} />
-                <Bar dataKey="prev" name={prevLabel} fill={COLOR_PREV} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="curr" name={currLabel} fill={COLOR_CURR} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="prev" name={prevLabel} fill={COLOR_PREV} radius={[4, 4, 0, 0]} maxBarSize={20}>
+                  <LabelList
+                    dataKey="prev"
+                    position="top"
+                    formatter={(v: number) => (v > 0 ? compactLabel(v, metric) : "")}
+                    style={{ fontSize: 9.5, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+                  />
+                </Bar>
+                <Bar dataKey="curr" name={currLabel} fill={COLOR_CURR} radius={[4, 4, 0, 0]} maxBarSize={20}>
+                  <LabelList
+                    dataKey="curr"
+                    position="top"
+                    formatter={(v: number) => (v > 0 ? compactLabel(v, metric) : "")}
+                    style={{ fontSize: 9.5, fontWeight: 600, fill: "hsl(var(--foreground))" }}
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </>

@@ -1,32 +1,25 @@
 "use client"
 
-import { format, subMonths } from "date-fns"
+import { format, parse } from "date-fns"
 import { es } from "date-fns/locale"
 
-// ─── Opciones: últimos 24 meses calendario ──────────────────────────────────
-export function getMonthOptions(count = 24): { value: string; label: string }[] {
-  const today = new Date()
-  const options: { value: string; label: string }[] = []
-  for (let i = 0; i < count; i++) {
-    const d = subMonths(today, i)
-    const label = format(d, "MMMM yyyy", { locale: es })
-    options.push({
-      value: format(d, "yyyy-MM"),
-      label: label.charAt(0).toUpperCase() + label.slice(1),
-    })
-  }
-  return options
+export function formatMonthLabel(monthStr: string): string {
+  const d = parse(monthStr, "yyyy-MM", new Date())
+  const label = format(d, "MMMM yyyy", { locale: es })
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 interface Props {
   value: string
+  months: string[]   // "yyyy-MM", cualquier orden — solo meses con ventas registradas
   onChange: (value: string) => void
   disabled?: boolean
   accent?: boolean
 }
 
-export function MonthSelect({ value, onChange, disabled, accent }: Props) {
-  const options = getMonthOptions()
+export function MonthSelect({ value, months, onChange, disabled, accent }: Props) {
+  // Más reciente primero
+  const options = [...months].sort().reverse()
 
   return (
     <select
@@ -38,9 +31,9 @@ export function MonthSelect({ value, onChange, disabled, accent }: Props) {
         accent ? "border-[#E85D04]/40 text-[#E85D04]" : "border-border text-foreground",
       ].join(" ")}
     >
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
+      {options.map((month) => (
+        <option key={month} value={month}>
+          {formatMonthLabel(month)}
         </option>
       ))}
     </select>
