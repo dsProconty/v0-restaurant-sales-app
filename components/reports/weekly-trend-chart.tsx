@@ -60,7 +60,7 @@ export function WeeklyTrendChart({ data }: Props) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Tendencia semanal</CardTitle>
-        <CardDescription>Ingresos de los últimos 7 días</CardDescription>
+        <CardDescription>Ingresos de los últimos 7 días hábiles (sin domingos)</CardDescription>
       </CardHeader>
       <CardContent>
         {!hasData ? (

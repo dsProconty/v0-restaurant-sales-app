@@ -7,7 +7,6 @@ import {
   endOfWeek,
   subMonths,
   subDays,
-  eachDayOfInterval,
 } from "date-fns"
 import { es } from "date-fns/locale"
 import { ReportsDashboard } from "@/components/reports/reports-dashboard"
@@ -73,6 +72,17 @@ function countWorkingDays(start: Date, end: Date): number {
   return count
 }
 
+// Los últimos N días hábiles terminando en `end` (excluye domingos), en orden ascendente
+function lastNWorkingDays(end: Date, n: number): Date[] {
+  const days: Date[] = []
+  const cursor = new Date(end)
+  while (days.length < n) {
+    if (cursor.getDay() !== 0) days.push(new Date(cursor))
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return days.reverse()
+}
+
 // ─── Data fetching ──────────────────────────────────────────────────────────
 async function getReportData(): Promise<ReportData> {
   log("Iniciando fetch de datos...")
@@ -89,12 +99,13 @@ async function getReportData(): Promise<ReportData> {
   const currentWeekEnd = endOfWeek(today, { weekStartsOn: 1 })
   const prevWeekStart = startOfWeek(subDays(today, 7), { weekStartsOn: 1 })
   const prevWeekEnd = endOfWeek(subDays(today, 7), { weekStartsOn: 1 })
-  const sevenDaysAgo = subDays(today, 6)
+  const last7WorkingDays = lastNWorkingDays(today, 7)
+  const trendRangeStart = last7WorkingDays[0]
 
   log("Rangos de fecha calculados", {
     today: todayStr,
     monthStart: format(currentMonthStart, "yyyy-MM-dd"),
-    sevenDaysAgo: format(sevenDaysAgo, "yyyy-MM-dd"),
+    trendRangeStart: format(trendRangeStart, "yyyy-MM-dd"),
   })
 
   // ── Queries en paralelo ─────────────────────────────────────────────────
@@ -119,7 +130,7 @@ async function getReportData(): Promise<ReportData> {
       .gte("sale_date", format(prevWeekStart, "yyyy-MM-dd"))
       .lte("sale_date", format(prevWeekEnd, "yyyy-MM-dd")),
     supabase.from("daily_sales").select("total_revenue, sale_date")
-      .gte("sale_date", format(sevenDaysAgo, "yyyy-MM-dd"))
+      .gte("sale_date", format(trendRangeStart, "yyyy-MM-dd"))
       .lte("sale_date", todayStr),
     supabase.from("sales_items").select(`
       quantity, subtotal,
@@ -173,7 +184,7 @@ async function getReportData(): Promise<ReportData> {
   for (const row of last7DaysRes.data ?? []) {
     salesMap[row.sale_date] = (salesMap[row.sale_date] ?? 0) + row.total_revenue
   }
-  const last7Days: DailyPoint[] = eachDayOfInterval({ start: sevenDaysAgo, end: today }).map(d => ({
+  const last7Days: DailyPoint[] = last7WorkingDays.map(d => ({
     date: format(d, "yyyy-MM-dd"),
     label: format(d, "EEE d", { locale: es }),
     amount: salesMap[format(d, "yyyy-MM-dd")] ?? 0,
