@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from "@/components/ui/sonner"
 import { Shell } from "@/components/layout/shell"
+import { getCurrentUser } from "@/lib/auth/session"
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -31,15 +32,17 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const currentUser = await getCurrentUser()
+
   return (
     <html lang="es">
       <body className="font-sans antialiased">
-        <Shell>{children}</Shell>
+        <Shell currentUser={currentUser}>{children}</Shell>
         <Toaster richColors position="top-right" />
         <Analytics />
       </body>

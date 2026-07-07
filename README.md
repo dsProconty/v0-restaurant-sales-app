@@ -52,9 +52,18 @@ git clone https://github.com/dsProconty/v0-restaurant-sales-app.git
 cd v0-restaurant-sales-app
 npm install
 cp .env.example .env.local
-# Completar NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Completar las variables de entorno (ver tabla abajo)
 npm run dev
 ```
+
+### Variables de entorno
+
+| Variable | Para qué | Dónde conseguirla |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Cliente Supabase (datos de negocio) | Supabase Dashboard → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Cliente Supabase (datos de negocio) | Supabase Dashboard → Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Login — lee/escribe la tabla `users` sin pasar por RLS | Supabase Dashboard → Settings → API → `service_role` (secreta, nunca exponerla con prefijo `NEXT_PUBLIC_`) |
+| `SESSION_SECRET` | Login — firma la cookie de sesión | Cualquier string aleatorio largo, ej. `openssl rand -base64 32` |
 
 ---
 

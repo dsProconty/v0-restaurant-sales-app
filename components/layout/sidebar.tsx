@@ -17,6 +17,7 @@ import {
   ChevronDown,
   BookOpen,
   TrendingUp,
+  Users,
   X,
 } from "lucide-react"
 
@@ -83,6 +84,7 @@ const NAV_ITEMS = {
   categoriasGastos: { href: "/expenses/categories", label: "Categorías de Gastos", icon: Tag },
   proveedores: { href: "/expenses/suppliers", label: "Proveedores", icon: Truck },
   recordatorios: { href: "/reminders", label: "Recordatorios", icon: Bell },
+  usuarios: { href: "/users", label: "Usuarios", icon: Users },
 }
 
 interface SidebarProps {
@@ -176,6 +178,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
         <SectionLabel label="Otros" />
         <NavItem item={NAV_ITEMS.recordatorios} onClick={onClose} />
+        <NavItem item={NAV_ITEMS.usuarios} onClick={onClose} />
       </nav>
     </aside>
   )
