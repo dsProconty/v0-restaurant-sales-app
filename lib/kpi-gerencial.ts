@@ -28,7 +28,6 @@ export interface MonthSummary {
   label: string   // "Junio 2026"
   total: number
   unitsTotal: number
-  avgTicket: number
   categoryStats: CategoryStat[]
   productStats: ProductStat[]
 }
@@ -37,6 +36,12 @@ export interface MonthlyTrendPoint {
   month: string   // "yyyy-MM"
   label: string   // "Jun"
   total: number
+}
+
+export interface MonthCategoryBreakdown {
+  month: string   // "yyyy-MM"
+  label: string   // "Junio 2026"
+  categoryStats: CategoryStat[]
 }
 
 export interface KpiGerencialData {
@@ -125,7 +130,6 @@ async function getMonthSummary(supabase: SupabaseClient, monthStr: string): Prom
     label: monthLabel(monthStr),
     total,
     unitsTotal,
-    avgTicket: unitsTotal > 0 ? total / unitsTotal : 0,
     categoryStats,
     productStats,
   }
@@ -221,8 +225,23 @@ export function emptyMonthSummary(monthStr: string): MonthSummary {
     label: monthLabel(monthStr),
     total: 0,
     unitsTotal: 0,
-    avgTicket: 0,
     categoryStats: [],
     productStats: [],
   }
+}
+
+// ─── Desglose de categorías para varios meses (modo "todo el historial") ────
+export async function getMonthlyCategoryBreakdown(months: string[]): Promise<MonthCategoryBreakdown[]> {
+  log("Fetch breakdown mensual iniciado", { meses: months.length })
+  const supabase = await createClient()
+
+  const results = await Promise.all(
+    months.map(async (monthStr) => {
+      const summary = await getMonthSummary(supabase, monthStr)
+      return { month: monthStr, label: summary.label, categoryStats: summary.categoryStats }
+    }),
+  )
+
+  log("Fetch breakdown mensual completo ✓", { meses: results.length })
+  return results
 }

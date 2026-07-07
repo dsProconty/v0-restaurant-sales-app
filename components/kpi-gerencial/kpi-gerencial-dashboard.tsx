@@ -2,11 +2,12 @@
 
 import { useCallback, useMemo, useState } from "react"
 import { format, subMonths } from "date-fns"
-import { DollarSign, ShoppingBag, Receipt, Award, Loader2 } from "lucide-react"
-import type { KpiGerencialData } from "@/lib/kpi-gerencial"
+import { DollarSign, ShoppingBag, Award, Loader2 } from "lucide-react"
+import type { KpiGerencialData, MonthCategoryBreakdown } from "@/lib/kpi-gerencial"
 import { MonthSelect } from "@/components/kpi-gerencial/month-select"
 import { ComparisonKpiCard } from "@/components/kpi-gerencial/comparison-kpi-card"
 import { CategoryComparisonChart } from "@/components/kpi-gerencial/category-comparison-chart"
+import { CategoryMultiMonthChart } from "@/components/kpi-gerencial/category-multi-month-chart"
 import { MonthlyTrendChart } from "@/components/kpi-gerencial/monthly-trend-chart"
 import { ProductComparisonTable } from "@/components/kpi-gerencial/product-comparison-table"
 
@@ -38,6 +39,8 @@ export function KpiGerencialDashboard({ initialData }: Props) {
   const [preset, setPreset] = useState<Preset>("anterior")
   const [data, setData] = useState<KpiGerencialData>(initialData)
   const [loading, setLoading] = useState(false)
+  const [monthlyBreakdown, setMonthlyBreakdown] = useState<MonthCategoryBreakdown[] | null>(null)
+  const [breakdownLoading, setBreakdownLoading] = useState(false)
 
   const fetchComparison = useCallback(async (a: string, b: string, trendStart?: string) => {
     log("Fetch iniciado", { a, b, trendStart })
@@ -57,6 +60,22 @@ export function KpiGerencialDashboard({ initialData }: Props) {
     }
   }, [])
 
+  const fetchMonthlyBreakdown = useCallback(async () => {
+    log("Fetch breakdown mensual iniciado")
+    setBreakdownLoading(true)
+    try {
+      const res = await fetch("/api/kpi-gerencial/monthly-categories")
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json: { months: MonthCategoryBreakdown[] } = await res.json()
+      setMonthlyBreakdown(json.months)
+      log("Fetch breakdown OK", { meses: json.months.length })
+    } catch (err) {
+      logError("Fetch breakdown falló", err)
+    } finally {
+      setBreakdownLoading(false)
+    }
+  }, [])
+
   function applyPreset(p: Preset) {
     setPreset(p)
     if (p === "personalizado") return
@@ -69,6 +88,7 @@ export function KpiGerencialDashboard({ initialData }: Props) {
       setMonthA(oldest)
       setMonthB(newest)
       fetchComparison(oldest, newest, oldest)
+      if (!monthlyBreakdown) fetchMonthlyBreakdown()
       return
     }
 
@@ -103,7 +123,6 @@ export function KpiGerencialDashboard({ initialData }: Props) {
 
   const revenueChange = pctChange(a.total, b.total)
   const unitsChange = pctChange(a.unitsTotal, b.unitsTotal)
-  const ticketChange = pctChange(a.avgTicket, b.avgTicket)
 
   const bestGrowthCategory = useMemo(() => {
     let best: { category: string; change: number } | null = null
@@ -116,6 +135,8 @@ export function KpiGerencialDashboard({ initialData }: Props) {
     }
     return best
   }, [a.categoryStats, b.categoryStats])
+
+  const showHistorialCharts = preset === "historial" && monthlyBreakdown !== null
 
   return (
     <div className="flex flex-col gap-6">
@@ -136,7 +157,7 @@ export function KpiGerencialDashboard({ initialData }: Props) {
             <span className="text-xs text-muted-foreground font-medium">vs</span>
             <MonthSelect value={monthB} months={availableMonths} onChange={handleMonthBChange} disabled={loading} accent />
           </div>
-          {loading && (
+          {(loading || breakdownLoading) && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Actualizando...
@@ -168,14 +189,14 @@ export function KpiGerencialDashboard({ initialData }: Props) {
         </div>
         {preset === "historial" && availableMonths.length > 0 && (
           <p className="text-xs text-muted-foreground">
-            Comparando el primer mes con ventas registradas ({a.label}) contra el más reciente ({b.label}) — el gráfico de evolución muestra todos los meses de por medio.
+            KPIs comparando el primer mes con ventas registradas ({a.label}) contra el más reciente ({b.label}) — los gráficos de categoría y la evolución mensual muestran todos los meses de por medio.
           </p>
         )}
       </div>
 
       {/* ── KPIs comparativos ── */}
       <div className={[
-        "grid grid-cols-2 lg:grid-cols-4 gap-3 transition-opacity duration-200",
+        "grid grid-cols-1 sm:grid-cols-3 gap-3 transition-opacity duration-200",
         loading ? "opacity-60" : "opacity-100",
       ].join(" ")}>
         <ComparisonKpiCard
@@ -195,14 +216,6 @@ export function KpiGerencialDashboard({ initialData }: Props) {
           icon={<ShoppingBag className="h-4 w-4" />}
         />
         <ComparisonKpiCard
-          label="Ticket promedio"
-          prevValue={fmtMoney(a.avgTicket)}
-          currValue={fmtMoney(b.avgTicket)}
-          change={ticketChange}
-          hint="Ingreso ÷ unidades"
-          icon={<Receipt className="h-4 w-4" />}
-        />
-        <ComparisonKpiCard
           label="Mayor crecimiento"
           prevValue=""
           currValue={bestGrowthCategory?.category ?? "—"}
@@ -212,29 +225,48 @@ export function KpiGerencialDashboard({ initialData }: Props) {
         />
       </div>
 
-      {/* ── Gráficos comparativos — ancho completo para que quepan todas las categorías ── */}
+      {/* ── Gráficos comparativos ── */}
       <div className={[
-        "grid grid-cols-1 gap-4 transition-opacity duration-200",
-        loading ? "opacity-60" : "opacity-100",
+        "grid grid-cols-1 lg:grid-cols-2 gap-4 transition-opacity duration-200",
+        (loading || breakdownLoading) ? "opacity-60" : "opacity-100",
       ].join(" ")}>
-        <CategoryComparisonChart
-          title="Ingresos por categoría"
-          description={`${a.label} vs ${b.label}`}
-          prevLabel={a.label}
-          currLabel={b.label}
-          prevStats={a.categoryStats}
-          currStats={b.categoryStats}
-          metric="revenue"
-        />
-        <CategoryComparisonChart
-          title="Unidades vendidas por categoría"
-          description={`${a.label} vs ${b.label}`}
-          prevLabel={a.label}
-          currLabel={b.label}
-          prevStats={a.categoryStats}
-          currStats={b.categoryStats}
-          metric="quantity"
-        />
+        {showHistorialCharts ? (
+          <>
+            <CategoryMultiMonthChart
+              title="Ingresos por categoría"
+              description="Todos los meses con ventas registradas"
+              months={monthlyBreakdown}
+              metric="revenue"
+            />
+            <CategoryMultiMonthChart
+              title="Unidades vendidas por categoría"
+              description="Todos los meses con ventas registradas"
+              months={monthlyBreakdown}
+              metric="quantity"
+            />
+          </>
+        ) : (
+          <>
+            <CategoryComparisonChart
+              title="Ingresos por categoría"
+              description={`${a.label} vs ${b.label}`}
+              prevLabel={a.label}
+              currLabel={b.label}
+              prevStats={a.categoryStats}
+              currStats={b.categoryStats}
+              metric="revenue"
+            />
+            <CategoryComparisonChart
+              title="Unidades vendidas por categoría"
+              description={`${a.label} vs ${b.label}`}
+              prevLabel={a.label}
+              currLabel={b.label}
+              prevStats={a.categoryStats}
+              currStats={b.categoryStats}
+              metric="quantity"
+            />
+          </>
+        )}
       </div>
 
       {/* ── Evolución mensual ── */}
