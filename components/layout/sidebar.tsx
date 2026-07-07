@@ -16,6 +16,7 @@ import {
   Tag,
   ChevronDown,
   BookOpen,
+  TrendingUp,
   X,
 } from "lucide-react"
 
@@ -67,6 +68,7 @@ const NAV_ITEMS = {
   nuevaVenta: { href: "/sales/new", label: "Nueva Venta", icon: PlusCircle },
   historial: { href: "/sales/history", label: "Historial", icon: History },
   reportes: { href: "/reports", label: "Reportes", icon: BarChart3 },
+  kpiGerencial: { href: "/kpi-gerencial", label: "KPI Gerencial", icon: TrendingUp },
   gastos: {
     href: "/expenses",
     label: "Gastos",
@@ -132,6 +134,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <NavItem item={NAV_ITEMS.nuevaVenta} onClick={onClose} />
         <NavItem item={NAV_ITEMS.historial} onClick={onClose} />
         <NavItem item={NAV_ITEMS.reportes} onClick={onClose} />
+        <NavItem item={NAV_ITEMS.kpiGerencial} onClick={onClose} />
 
         <SectionLabel label="Gastos" />
         <NavItem item={NAV_ITEMS.gastos} onClick={onClose} />
