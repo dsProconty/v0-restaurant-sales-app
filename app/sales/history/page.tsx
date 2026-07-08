@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { Calendar, ChevronRight, FileText, TrendingUp, Plus } from "lucide-react"
+import { Calendar, ChevronRight, FileText, TrendingUp, CalendarRange, Plus } from "lucide-react"
 
 async function getSalesHistory() {
   const supabase = await createClient()
@@ -33,6 +33,8 @@ export default async function SalesHistoryPage() {
   }
 
   const grandTotal = sales.reduce((sum, s) => sum + (s.total_revenue || 0), 0)
+  const monthCount = Object.keys(salesByMonth).length
+  const monthlyAverage = grandTotal / (monthCount || 1)
 
   return (
     <div>
@@ -55,18 +57,27 @@ export default async function SalesHistoryPage() {
 
         {/* Stats banner */}
         {sales.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            <div className="rounded-2xl bg-primary px-5 py-4">
-              <p className="text-primary-foreground/70 text-xs font-semibold uppercase tracking-wider mb-1">Total acumulado</p>
-              <p className="text-2xl font-bold text-primary-foreground">${grandTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</p>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8">
+            <div className="rounded-2xl bg-primary px-3 py-3 sm:px-5 sm:py-4">
+              <p className="text-primary-foreground/70 text-[10px] sm:text-xs font-semibold uppercase tracking-wider mb-1">Total acumulado</p>
+              <p className="text-lg sm:text-2xl font-bold text-primary-foreground">${grandTotal.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</p>
             </div>
-            <div className="rounded-2xl border border-border bg-card px-5 py-4">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Promedio diario</p>
+            <div className="rounded-2xl border border-border bg-card px-3 py-3 sm:px-5 sm:py-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                <TrendingUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <p className="text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Promedio diario</p>
               </div>
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-lg sm:text-2xl font-bold text-foreground">
                 ${(grandTotal / (sales.length || 1)).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card px-3 py-3 sm:px-5 sm:py-4">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                <CalendarRange className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <p className="text-muted-foreground text-[10px] sm:text-xs font-semibold uppercase tracking-wider">Promedio mensual</p>
+              </div>
+              <p className="text-lg sm:text-2xl font-bold text-foreground">
+                ${monthlyAverage.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>
