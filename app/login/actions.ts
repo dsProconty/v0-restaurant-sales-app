@@ -61,7 +61,7 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 días
+      maxAge: 60 * 60 * 24 * 3650, // ~10 años — no hay cierre por inactividad
     })
 
     log("Login OK", { username })

@@ -3,7 +3,9 @@ import { SignJWT, jwtVerify } from "jose"
 import { cookies } from "next/headers"
 
 export const SESSION_COOKIE = "session"
-const SESSION_DURATION = "7d"
+// Sesión de muy larga duración: el equipo debe permanecer conectado
+// siempre, sin cierres por inactividad ni por tiempo.
+const SESSION_DURATION = "3650d"
 
 export interface SessionPayload {
   userId: string
