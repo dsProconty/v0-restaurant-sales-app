@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -15,9 +14,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ClientPaymentDialog } from "@/components/cxc/client-payment-dialog"
+import { ClientDetailsDialog } from "@/components/cxc/client-details-dialog"
+import { NewDebtDialog } from "@/components/cxc/new-debt-dialog"
 import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
-import { type CxcDebt, getCxcStatusLabel, summarizeClientDebts } from "@/lib/cxc"
+import { type CxcClient, type CxcDebt, getCxcStatusLabel, summarizeClientDebts } from "@/lib/cxc"
 import { CheckCircle2, Eye, HandCoins, PlusCircle, Receipt } from "lucide-react"
 
 const fmt = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
@@ -30,7 +31,22 @@ function statusBadgeClass(status: string, overdue: boolean) {
   return "bg-muted text-muted-foreground"
 }
 
-export function ClientSummaryList({ debts }: { debts: CxcDebt[] }) {
+interface Product {
+  id: string
+  name: string
+  category: string
+  price: number
+}
+
+export function ClientSummaryList({
+  debts,
+  clients,
+  products,
+}: {
+  debts: CxcDebt[]
+  clients: CxcClient[]
+  products: Product[]
+}) {
   const [filter, setFilter] = useState<string>("open")
   const todayStr = new Date().toISOString().slice(0, 10)
 
@@ -114,12 +130,18 @@ export function ClientSummaryList({ debts }: { debts: CxcDebt[] }) {
                             }
                           />
                         )}
-                        <Button size="icon" variant="ghost" title="Ver detalles de los consumos" asChild>
-                          <Link href={`/cxc/clients/${row.client.id}`}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">Ver detalles de los consumos</span>
-                          </Link>
-                        </Button>
+                        <ClientDetailsDialog
+                          client={row.client}
+                          debts={row.debts}
+                          products={products}
+                          allClients={clients}
+                          trigger={
+                            <Button size="icon" variant="ghost" title="Ver detalles de los consumos">
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">Ver detalles de los consumos</span>
+                            </Button>
+                          }
+                        />
                         {row.totalBalance > 0.001 && (
                           <ClientPaymentDialog
                             clientId={row.client.id}
@@ -134,12 +156,17 @@ export function ClientSummaryList({ debts }: { debts: CxcDebt[] }) {
                             }
                           />
                         )}
-                        <Button size="icon" variant="ghost" title="Agregar nuevo consumo" asChild>
-                          <Link href={`/cxc/new?client=${row.client.id}`}>
-                            <PlusCircle className="h-4 w-4" />
-                            <span className="sr-only">Agregar nuevo consumo</span>
-                          </Link>
-                        </Button>
+                        <NewDebtDialog
+                          clients={clients}
+                          products={products}
+                          defaultClientId={row.client.id}
+                          trigger={
+                            <Button size="icon" variant="ghost" title="Agregar nuevo consumo">
+                              <PlusCircle className="h-4 w-4" />
+                              <span className="sr-only">Agregar nuevo consumo</span>
+                            </Button>
+                          }
+                        />
                       </div>
                     </TableCell>
                   </TableRow>

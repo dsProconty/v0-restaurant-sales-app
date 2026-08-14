@@ -47,10 +47,14 @@ export function DebtForm({
   clients,
   products,
   defaultClientId,
+  onSuccess,
+  onCancel,
 }: {
   clients: CxcClient[]
   products: Product[]
   defaultClientId?: string
+  onSuccess?: () => void
+  onCancel?: () => void
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -154,8 +158,12 @@ export function DebtForm({
         toast.error(result.error)
       } else {
         toast.success("Deuda registrada")
-        router.push("/cxc")
         router.refresh()
+        if (onSuccess) {
+          onSuccess()
+        } else {
+          router.push("/cxc")
+        }
       }
     })
   }
@@ -338,7 +346,7 @@ export function DebtForm({
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">
-        <Button type="button" variant="outline" className="flex-1" onClick={() => router.back()}>
+        <Button type="button" variant="outline" className="flex-1" onClick={() => (onCancel ? onCancel() : router.back())}>
           Cancelar
         </Button>
         <Button type="submit" className="flex-1" disabled={isPending}>
