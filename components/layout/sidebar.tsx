@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Users,
   X,
+  Wallet,
 } from "lucide-react"
 
 interface NavItemDef {
@@ -80,6 +81,12 @@ const NAV_ITEMS = {
         !p.startsWith("/expenses/categories") &&
         !p.startsWith("/expenses/suppliers")),
   },
+  cxc: {
+    href: "/cxc",
+    label: "Cuentas por Cobrar",
+    icon: Wallet,
+    match: (p: string) => p === "/cxc" || p.startsWith("/cxc/"),
+  },
   productos: { href: "/products", label: "Productos", icon: Package },
   categoriasGastos: { href: "/expenses/categories", label: "Categorías de Gastos", icon: Tag },
   proveedores: { href: "/expenses/suppliers", label: "Proveedores", icon: Truck },
@@ -140,6 +147,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
         <SectionLabel label="Gastos" />
         <NavItem item={NAV_ITEMS.gastos} onClick={onClose} />
+
+        <SectionLabel label="Cuentas por Cobrar" />
+        <NavItem item={NAV_ITEMS.cxc} onClick={onClose} />
 
         <SectionLabel label="Catálogos" />
         <button
