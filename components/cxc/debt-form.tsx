@@ -43,12 +43,20 @@ interface ItemRow {
 
 const CUSTOM_VALUE = "__custom__"
 
-export function DebtForm({ clients, products }: { clients: CxcClient[]; products: Product[] }) {
+export function DebtForm({
+  clients,
+  products,
+  defaultClientId,
+}: {
+  clients: CxcClient[]
+  products: Product[]
+  defaultClientId?: string
+}) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const [clientList, setClientList] = useState(clients)
-  const [clientId, setClientId] = useState<string>("")
+  const [clientId, setClientId] = useState<string>(defaultClientId ?? "")
   const [consumptionDate, setConsumptionDate] = useState<Date>(new Date())
   const [consumptionCalOpen, setConsumptionCalOpen] = useState(false)
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)

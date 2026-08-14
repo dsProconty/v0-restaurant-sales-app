@@ -66,3 +66,58 @@ export function getCxcStatusLabel(status: CxcStatus, overdue: boolean) {
   if (status === "partial") return "Parcial"
   return "Pendiente"
 }
+
+export interface CxcClientSummary {
+  client: CxcClient
+  debts: CxcDebt[]
+  debtCount: number
+  totalAmount: number
+  totalPaid: number
+  totalBalance: number
+  lastConsumptionDate: string
+  status: CxcStatus
+  overdue: boolean
+}
+
+export function summarizeClientDebts(debts: CxcDebt[], todayStr: string): CxcClientSummary[] {
+  const byClient = new Map<string, CxcClientSummary>()
+
+  for (const debt of debts) {
+    if (!debt.cxc_clients) continue
+    const balance = getCxcBalance(debt)
+    const paid = getCxcPaidAmount(debt)
+    const overdue = isCxcOverdue(debt, todayStr)
+
+    let entry = byClient.get(debt.client_id)
+    if (!entry) {
+      entry = {
+        client: debt.cxc_clients,
+        debts: [],
+        debtCount: 0,
+        totalAmount: 0,
+        totalPaid: 0,
+        totalBalance: 0,
+        lastConsumptionDate: debt.consumption_date,
+        status: "pending",
+        overdue: false,
+      }
+      byClient.set(debt.client_id, entry)
+    }
+
+    entry.debts.push(debt)
+    entry.debtCount += 1
+    entry.totalAmount += Number(debt.total_amount)
+    entry.totalPaid += paid
+    entry.totalBalance += balance
+    entry.overdue = entry.overdue || overdue
+    if (debt.consumption_date > entry.lastConsumptionDate) entry.lastConsumptionDate = debt.consumption_date
+  }
+
+  for (const entry of byClient.values()) {
+    if (entry.totalBalance <= 0.001) entry.status = "paid"
+    else if (entry.totalPaid > 0) entry.status = "partial"
+    else entry.status = "pending"
+  }
+
+  return Array.from(byClient.values())
+}

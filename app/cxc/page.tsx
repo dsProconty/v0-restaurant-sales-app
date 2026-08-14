@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { getCxcDebts } from "@/app/cxc/actions"
-import { DebtsList } from "@/components/cxc/debts-list"
+import { ClientSummaryList } from "@/components/cxc/client-summary-list"
 import { Button } from "@/components/ui/button"
 import { PlusCircle, Users, TrendingUp } from "lucide-react"
 import { getCxcBalance, isCxcOverdue } from "@/lib/cxc"
@@ -63,7 +63,7 @@ export default async function CxcPage() {
         </div>
       </div>
 
-      <DebtsList debts={debts} />
+      <ClientSummaryList debts={debts} />
     </main>
   )
 }

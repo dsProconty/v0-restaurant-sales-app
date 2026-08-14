@@ -84,6 +84,21 @@ export async function deleteCxcClient(id: string) {
   return { success: true }
 }
 
+export async function getCxcClient(id: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("cxc_clients")
+    .select("*")
+    .eq("id", id)
+    .single()
+
+  if (error) {
+    console.error("[CxcClients] Error fetching client:", error)
+    return null
+  }
+  return data
+}
+
 // ── Productos (para el selector de items) ───────────────────────────────────────
 
 export async function getActiveProducts() {
@@ -113,6 +128,22 @@ export async function getCxcDebts() {
 
   if (error) {
     console.error("[CxcDebts] Error fetching debts:", error)
+    return []
+  }
+  return data
+}
+
+export async function getCxcDebtsByClient(clientId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("cxc_debts")
+    .select("*, cxc_clients(id, name, phone), cxc_debt_items(*), cxc_payments(*)")
+    .eq("client_id", clientId)
+    .order("due_date", { ascending: true, nullsFirst: false })
+    .order("consumption_date", { ascending: false })
+
+  if (error) {
+    console.error("[CxcDebts] Error fetching client debts:", error)
     return []
   }
   return data
@@ -246,6 +277,64 @@ export async function createCxcPayment(debtId: string, formData: FormData) {
 
   revalidatePath("/cxc")
   revalidatePath(`/cxc/${debtId}`)
+  revalidatePath("/cxc/aging")
+  return { success: true }
+}
+
+// Aplica un abono al saldo total de un cliente, distribuyéndolo entre sus
+// deudas pendientes (las de cobro más próximo primero) hasta agotar el monto.
+export async function createCxcClientPayment(clientId: string, formData: FormData) {
+  const supabase = await createClient()
+
+  const amount = parseFloat(formData.get("amount") as string)
+  const payment_date = formData.get("payment_date") as string
+  const notes = (formData.get("notes") as string) || null
+
+  if (isNaN(amount) || amount <= 0) return { error: "El monto debe ser mayor a 0" }
+  if (!payment_date) return { error: "La fecha es requerida" }
+
+  const { data: debts, error: debtsError } = await supabase
+    .from("cxc_debts")
+    .select("id, total_amount, cxc_payments(amount)")
+    .eq("client_id", clientId)
+    .order("due_date", { ascending: true, nullsFirst: false })
+    .order("consumption_date", { ascending: true })
+
+  if (debtsError) {
+    console.error("[CxcPayments] Error fetching client debts:", debtsError)
+    return { error: "Error al obtener las deudas del cliente" }
+  }
+
+  const pending = debts
+    .map((d) => ({
+      id: d.id,
+      balance: Number(d.total_amount) - d.cxc_payments.reduce((sum, p) => sum + Number(p.amount), 0),
+    }))
+    .filter((d) => d.balance > 0.001)
+
+  const totalBalance = pending.reduce((sum, d) => sum + d.balance, 0)
+  if (amount > totalBalance + 0.01) return { error: "El monto excede el saldo pendiente del cliente" }
+
+  let remaining = amount
+  const rows: { debt_id: string; amount: number; payment_date: string; notes: string | null }[] = []
+  for (const debt of pending) {
+    if (remaining <= 0) break
+    const applied = Math.min(debt.balance, remaining)
+    rows.push({ debt_id: debt.id, amount: applied, payment_date, notes })
+    remaining -= applied
+  }
+
+  console.log("[CxcPayments] Creating client payment:", { clientId, amount, debts: rows.length })
+  const { error } = await supabase.from("cxc_payments").insert(rows)
+
+  if (error) {
+    console.error("[CxcPayments] Error creating client payment:", error)
+    return { error: `Error al registrar el abono: ${error.message}` }
+  }
+
+  revalidatePath("/cxc")
+  revalidatePath("/cxc/clients")
+  revalidatePath(`/cxc/clients/${clientId}`)
   revalidatePath("/cxc/aging")
   return { success: true }
 }
