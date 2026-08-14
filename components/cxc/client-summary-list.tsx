@@ -18,7 +18,7 @@ import { ClientPaymentDialog } from "@/components/cxc/client-payment-dialog"
 import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import { type CxcDebt, getCxcStatusLabel, summarizeClientDebts } from "@/lib/cxc"
-import { Eye, PlusCircle, Receipt } from "lucide-react"
+import { CheckCircle2, Eye, HandCoins, PlusCircle, Receipt } from "lucide-react"
 
 const fmt = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
 const fmtDate = (d: string) => format(parseISO(d + "T12:00:00"), "d MMM yyyy", { locale: es })
@@ -99,7 +99,7 @@ export function ClientSummaryList({ debts }: { debts: CxcDebt[] }) {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                      <div className="flex items-center justify-end gap-1">
                         {row.totalBalance > 0.001 && (
                           <ClientPaymentDialog
                             clientId={row.client.id}
@@ -107,16 +107,17 @@ export function ClientSummaryList({ debts }: { debts: CxcDebt[] }) {
                             balance={row.totalBalance}
                             mode="abono"
                             trigger={
-                              <Button size="sm" variant="outline">
-                                Abono
+                              <Button size="icon" variant="ghost" title="Registrar abono">
+                                <HandCoins className="h-4 w-4" />
+                                <span className="sr-only">Registrar abono</span>
                               </Button>
                             }
                           />
                         )}
-                        <Button size="sm" variant="ghost" asChild>
+                        <Button size="icon" variant="ghost" title="Ver detalles de los consumos" asChild>
                           <Link href={`/cxc/clients/${row.client.id}`}>
-                            <Eye className="h-4 w-4 mr-1" />
-                            Detalles
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only">Ver detalles de los consumos</span>
                           </Link>
                         </Button>
                         {row.totalBalance > 0.001 && (
@@ -126,16 +127,17 @@ export function ClientSummaryList({ debts }: { debts: CxcDebt[] }) {
                             balance={row.totalBalance}
                             mode="settle"
                             trigger={
-                              <Button size="sm" variant="outline">
-                                Cancelar deuda
+                              <Button size="icon" variant="ghost" title="Cancelar deuda">
+                                <CheckCircle2 className="h-4 w-4" />
+                                <span className="sr-only">Cancelar deuda</span>
                               </Button>
                             }
                           />
                         )}
-                        <Button size="sm" asChild>
+                        <Button size="icon" variant="ghost" title="Agregar nuevo consumo" asChild>
                           <Link href={`/cxc/new?client=${row.client.id}`}>
-                            <PlusCircle className="h-4 w-4 mr-1" />
-                            Nuevo consumo
+                            <PlusCircle className="h-4 w-4" />
+                            <span className="sr-only">Agregar nuevo consumo</span>
                           </Link>
                         </Button>
                       </div>
