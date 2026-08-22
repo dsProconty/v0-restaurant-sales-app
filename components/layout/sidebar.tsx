@@ -151,11 +151,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <SectionLabel label="Cuentas por Cobrar" />
         <NavItem item={NAV_ITEMS.cxc} onClick={onClose} />
 
-        <SectionLabel label="Catálogos" />
         <button
           onClick={() => setCatalogosOpen((p) => !p)}
           className={cn(
-            "flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium w-full transition-all duration-200",
+            "flex items-center justify-between rounded-lg px-3 py-2 mt-4 text-sm font-medium w-full transition-all duration-200",
             catalogosActive
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
