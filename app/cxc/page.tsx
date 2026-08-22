@@ -22,12 +22,12 @@ export default async function CxcPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Cuentas por Cobrar</h1>
           <p className="text-sm text-muted-foreground">Deudas y consumos a crédito de clientes</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" asChild>
             <Link href="/cxc/clients">
               <Users className="h-4 w-4 mr-1" />
