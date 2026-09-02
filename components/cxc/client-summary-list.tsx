@@ -18,7 +18,7 @@ import { ClientDetailsDialog } from "@/components/cxc/client-details-dialog"
 import { NewDebtDialog } from "@/components/cxc/new-debt-dialog"
 import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
-import { type CxcClient, type CxcDebt, getCxcStatusLabel, summarizeClientDebts } from "@/lib/cxc"
+import { type CxcDebt, getCxcStatusLabel, summarizeClientDebts } from "@/lib/cxc"
 import { CheckCircle2, Eye, HandCoins, PlusCircle, Receipt } from "lucide-react"
 
 const fmt = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
@@ -31,22 +31,7 @@ function statusBadgeClass(status: string, overdue: boolean) {
   return "bg-muted text-muted-foreground"
 }
 
-interface Product {
-  id: string
-  name: string
-  category: string
-  price: number
-}
-
-export function ClientSummaryList({
-  debts,
-  clients,
-  products,
-}: {
-  debts: CxcDebt[]
-  clients: CxcClient[]
-  products: Product[]
-}) {
+export function ClientSummaryList({ debts }: { debts: CxcDebt[] }) {
   const [filter, setFilter] = useState<string>("open")
   const todayStr = new Date().toISOString().slice(0, 10)
 
@@ -133,8 +118,6 @@ export function ClientSummaryList({
                         <ClientDetailsDialog
                           client={row.client}
                           debts={row.debts}
-                          products={products}
-                          allClients={clients}
                           trigger={
                             <Button size="icon" variant="ghost" title="Ver detalles de los consumos">
                               <Eye className="h-4 w-4" />
@@ -157,8 +140,6 @@ export function ClientSummaryList({
                           />
                         )}
                         <NewDebtDialog
-                          clients={clients}
-                          products={products}
                           defaultClientId={row.client.id}
                           trigger={
                             <Button size="icon" variant="ghost" title="Agregar nuevo consumo">
