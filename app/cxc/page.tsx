@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { getCxcDebts, getCxcClients, getActiveProducts } from "@/app/cxc/actions"
+import { getCxcDebts } from "@/app/cxc/actions"
 import { ClientSummaryList } from "@/components/cxc/client-summary-list"
 import { NewDebtDialog } from "@/components/cxc/new-debt-dialog"
 import { Button } from "@/components/ui/button"
@@ -7,7 +7,7 @@ import { PlusCircle, Users, TrendingUp } from "lucide-react"
 import { getCxcBalance, isCxcOverdue } from "@/lib/cxc"
 
 export default async function CxcPage() {
-  const [debts, clients, products] = await Promise.all([getCxcDebts(), getCxcClients(), getActiveProducts()])
+  const debts = await getCxcDebts()
   const todayStr = new Date().toISOString().slice(0, 10)
 
   const totalPending = debts.reduce((sum, d) => sum + Math.max(getCxcBalance(d), 0), 0)
@@ -41,8 +41,6 @@ export default async function CxcPage() {
             </Link>
           </Button>
           <NewDebtDialog
-            clients={clients}
-            products={products}
             trigger={
               <Button size="sm">
                 <PlusCircle className="h-4 w-4 mr-1" />
@@ -68,7 +66,7 @@ export default async function CxcPage() {
         </div>
       </div>
 
-      <ClientSummaryList debts={debts} clients={clients} products={products} />
+      <ClientSummaryList debts={debts} />
     </main>
   )
 }

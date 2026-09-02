@@ -37,23 +37,12 @@ function statusBadgeClass(status: string, overdue: boolean) {
   return "bg-muted text-muted-foreground"
 }
 
-interface Product {
-  id: string
-  name: string
-  category: string
-  price: number
-}
-
 export function ClientDetailContent({
   client,
   debts,
-  products,
-  allClients,
 }: {
   client: CxcClient
   debts: CxcDebt[]
-  products?: Product[]
-  allClients?: CxcClient[]
 }) {
   const todayStr = new Date().toISOString().slice(0, 10)
 
@@ -102,26 +91,15 @@ export function ClientDetailContent({
         {totalBalance > 0.001 && (
           <ClientPaymentDialog clientId={client.id} clientName={client.name} balance={totalBalance} mode="settle" />
         )}
-        {products && allClients ? (
-          <NewDebtDialog
-            clients={allClients}
-            products={products}
-            defaultClientId={client.id}
-            trigger={
-              <Button size="sm" variant="outline">
-                <PlusCircle className="h-4 w-4 mr-1" />
-                Nuevo consumo
-              </Button>
-            }
-          />
-        ) : (
-          <Button size="sm" variant="outline" asChild>
-            <Link href={`/cxc/new?client=${client.id}`}>
+        <NewDebtDialog
+          defaultClientId={client.id}
+          trigger={
+            <Button size="sm" variant="outline">
               <PlusCircle className="h-4 w-4 mr-1" />
               Nuevo consumo
-            </Link>
-          </Button>
-        )}
+            </Button>
+          }
+        />
       </div>
 
       <Card>

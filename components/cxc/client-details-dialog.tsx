@@ -5,24 +5,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ClientDetailContent } from "@/components/cxc/client-detail-content"
 import type { CxcClient, CxcDebt } from "@/lib/cxc"
 
-interface Product {
-  id: string
-  name: string
-  category: string
-  price: number
-}
-
 export function ClientDetailsDialog({
   client,
   debts,
-  products,
-  allClients,
   trigger,
 }: {
   client: CxcClient
   debts: CxcDebt[]
-  products: Product[]
-  allClients: CxcClient[]
   trigger: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -34,7 +23,7 @@ export function ClientDetailsDialog({
         <DialogHeader>
           <DialogTitle className="sr-only">Detalles de {client.name}</DialogTitle>
         </DialogHeader>
-        <ClientDetailContent client={client} debts={debts} products={products} allClients={allClients} />
+        <ClientDetailContent client={client} debts={debts} />
       </DialogContent>
     </Dialog>
   )
