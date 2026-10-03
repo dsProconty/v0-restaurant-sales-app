@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Package, Save, PencilLine, ChevronDown, ShoppingCart } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { ScrollToTopButton } from "@/components/ui/scroll-to-top-button"
 
 interface Product {
   id: string
@@ -485,6 +486,8 @@ export function SalesEntryForm({
 
       {/* Spacer for mobile floating bar */}
       <div className="h-24 lg:hidden" />
+
+      <ScrollToTopButton className="bottom-36 right-4 lg:bottom-6 lg:right-6" />
     </form>
   )
 }
